@@ -147,7 +147,7 @@ namespace NSwag.Commands
             return Task.Run(async () =>
             {
                 var saveFile = false;
-                var data = DynamicApis.FileReadAllText(filePath);
+                var data = await DynamicApis.FileReadAllTextAsync(filePath).ConfigureAwait(false);
                 data = TransformLegacyDocument(data, out saveFile); // TODO: Remove this legacy stuff later
 
                 var settings = GetSerializerSettings();
@@ -169,12 +169,12 @@ namespace NSwag.Commands
         /// <returns>The task.</returns>
         public Task SaveAsync()
         {
-            return Task.Run(() =>
+            return Task.Run(async () =>
             {
                 ConvertToRelativePaths();
                 _latestData = JsonConvert.SerializeObject(this, Formatting.Indented, GetSerializerSettings());
                 ConvertToAbsolutePaths();
-                DynamicApis.FileWriteAllText(Path, _latestData);
+                await DynamicApis.FileWriteAllTextAsync(Path, _latestData).ConfigureAwait(false);
             });
         }
 
@@ -199,7 +199,7 @@ namespace NSwag.Commands
 
         private async Task<SwaggerDocument> GenerateDocumentAsync()
         {
-            return await ((dynamic)SelectedSwaggerGenerator).RunAsync();
+            return (SwaggerDocument)await SelectedSwaggerGenerator.RunAsync(null, null);
         }
 
         private static JsonSerializerSettings GetSerializerSettings()
@@ -217,6 +217,9 @@ namespace NSwag.Commands
 
         private void ConvertToAbsolutePaths()
         {
+            if (!SwaggerGenerators.FromSwaggerCommand.Url.StartsWith("http://") && !SwaggerGenerators.FromSwaggerCommand.Url.StartsWith("https://"))
+                SwaggerGenerators.FromSwaggerCommand.Url = ConvertToAbsolutePath(SwaggerGenerators.FromSwaggerCommand.Url);
+
             SwaggerGenerators.WebApiToSwaggerCommand.DocumentTemplate = ConvertToAbsolutePath(SwaggerGenerators.WebApiToSwaggerCommand.DocumentTemplate);
             SwaggerGenerators.WebApiToSwaggerCommand.AssemblyPaths = SwaggerGenerators.WebApiToSwaggerCommand.AssemblyPaths.Select(ConvertToAbsolutePath).ToArray();
             SwaggerGenerators.WebApiToSwaggerCommand.ReferencePaths = SwaggerGenerators.WebApiToSwaggerCommand.ReferencePaths.Select(ConvertToAbsolutePath).ToArray();
@@ -228,9 +231,6 @@ namespace NSwag.Commands
             CodeGenerators.SwaggerToTypeScriptClientCommand.ExtensionCode = ConvertToAbsolutePath(CodeGenerators.SwaggerToTypeScriptClientCommand.ExtensionCode);
             CodeGenerators.SwaggerToCSharpClientCommand.ContractsOutputFilePath = ConvertToAbsolutePath(CodeGenerators.SwaggerToCSharpClientCommand.ContractsOutputFilePath);
 
-            foreach (var generator in CodeGenerators.Items.Concat(SwaggerGenerators.Items))
-                generator.OutputFilePath = ConvertToAbsolutePath(generator.OutputFilePath);
-
             CodeGenerators.SwaggerToTypeScriptClientCommand.ExtensionCode = ConvertToAbsolutePath(CodeGenerators.SwaggerToTypeScriptClientCommand.ExtensionCode);
             CodeGenerators.SwaggerToCSharpClientCommand.ContractsOutputFilePath = ConvertToAbsolutePath(CodeGenerators.SwaggerToCSharpClientCommand.ContractsOutputFilePath);
 
@@ -240,6 +240,9 @@ namespace NSwag.Commands
 
         private void ConvertToRelativePaths()
         {
+            if (!SwaggerGenerators.FromSwaggerCommand.Url.StartsWith("http://") && !SwaggerGenerators.FromSwaggerCommand.Url.StartsWith("https://"))
+                SwaggerGenerators.FromSwaggerCommand.Url = ConvertToRelativePath(SwaggerGenerators.FromSwaggerCommand.Url);
+
             SwaggerGenerators.WebApiToSwaggerCommand.DocumentTemplate = ConvertToRelativePath(SwaggerGenerators.WebApiToSwaggerCommand.DocumentTemplate);
             SwaggerGenerators.WebApiToSwaggerCommand.AssemblyPaths = SwaggerGenerators.WebApiToSwaggerCommand.AssemblyPaths.Select(ConvertToRelativePath).ToArray();
             SwaggerGenerators.WebApiToSwaggerCommand.ReferencePaths = SwaggerGenerators.WebApiToSwaggerCommand.ReferencePaths.Select(ConvertToRelativePath).ToArray();
@@ -250,9 +253,6 @@ namespace NSwag.Commands
 
             CodeGenerators.SwaggerToTypeScriptClientCommand.ExtensionCode = ConvertToRelativePath(CodeGenerators.SwaggerToTypeScriptClientCommand.ExtensionCode);
             CodeGenerators.SwaggerToCSharpClientCommand.ContractsOutputFilePath = ConvertToRelativePath(CodeGenerators.SwaggerToCSharpClientCommand.ContractsOutputFilePath);
-
-            foreach (var generator in CodeGenerators.Items.Concat(SwaggerGenerators.Items))
-                generator.OutputFilePath = ConvertToRelativePath(generator.OutputFilePath);
 
             CodeGenerators.SwaggerToTypeScriptClientCommand.ExtensionCode = ConvertToRelativePath(CodeGenerators.SwaggerToTypeScriptClientCommand.ExtensionCode);
             CodeGenerators.SwaggerToCSharpClientCommand.ContractsOutputFilePath = ConvertToRelativePath(CodeGenerators.SwaggerToCSharpClientCommand.ContractsOutputFilePath);
@@ -277,6 +277,9 @@ namespace NSwag.Commands
 
         private static string TransformLegacyDocument(string data, out bool saveFile)
         {
+            saveFile = false;
+
+            // New file format
             if (data.Contains("\"SelectedSwaggerGenerator\""))
             {
                 var obj = JsonConvert.DeserializeObject<JObject>(data);
@@ -331,7 +334,10 @@ namespace NSwag.Commands
                 data = obj.ToString().Replace("\"OutputFilePath\"", "\"output\"");
                 saveFile = true;
             }
-            else if (data.Contains("generateReadOnlyKeywords") && !data.Contains("typeScriptVersion"))
+
+            // typeScriptVersion
+
+            if (data.Contains("generateReadOnlyKeywords") && !data.Contains("typeScriptVersion"))
             {
                 data = data.Replace(@"""GenerateReadOnlyKeywords"": true", @"""typeScriptVersion"": 2.0");
                 data = data.Replace(@"""generateReadOnlyKeywords"": true", @"""typeScriptVersion"": 2.0");
@@ -341,8 +347,39 @@ namespace NSwag.Commands
 
                 saveFile = true;
             }
-            else
-                saveFile = false;
+
+            // Full type names
+
+            if (data.Contains("\"dateType\": \"DateTime\""))
+            {
+                data = data.Replace("\"dateType\": \"DateTime\"", "\"dateType\": \"System.DateTime\"");
+                saveFile = true;
+            }
+            if (data.Contains("\"dateTimeType\": \"DateTime\""))
+            {
+                data = data.Replace("\"dateTimeType\": \"DateTime\"", "\"dateTimeType\": \"System.DateTime\"");
+                saveFile = true;
+            }
+            if (data.Contains("\"timeType\": \"TimeSpan\""))
+            {
+                data = data.Replace("\"timeType\": \"TimeSpan\"", "\"timeType\": \"System.TimeSpan\"");
+                saveFile = true;
+            }
+            if (data.Contains("\"timeSpanType\": \"TimeSpan\""))
+            {
+                data = data.Replace("\"timeSpanType\": \"TimeSpan\"", "\"timeSpanType\": \"System.TimeSpan\"");
+                saveFile = true;
+            }
+            if (data.Contains("\"arrayType\": \"ObservableCollection\""))
+            {
+                data = data.Replace("\"arrayType\": \"ObservableCollection\"", "\"arrayType\": \"System.Collections.ObjectModel.ObservableCollection\"");
+                saveFile = true;
+            }
+            if (data.Contains("\"dictionaryType\": \"Dictionary\""))
+            {
+                data = data.Replace("\"dictionaryType\": \"Dictionary\"", "\"dictionaryType\": \"System.Collections.Generic.Dictionary\"");
+                saveFile = true;
+            }
 
             return data;
         }

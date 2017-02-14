@@ -10,8 +10,8 @@ using System.Threading.Tasks;
 using NConsole;
 using Newtonsoft.Json;
 using NJsonSchema;
-using NSwag.CodeGeneration.SwaggerGenerators;
 using NSwag.Commands.Base;
+using NSwag.SwaggerGeneration;
 
 #pragma warning disable 1591
 
@@ -81,20 +81,26 @@ namespace NSwag.Commands
             set { Settings.GenerateKnownTypes = value; }
         }
 
+        [Argument(Name = "GenerateXmlObjects", IsRequired = false, Description = "Generate xmlObject representation for definitions (default: false).")]
+        public bool GenerateXmlObjects
+        {
+            get { return Settings.GenerateXmlObjects; }
+            set { Settings.GenerateXmlObjects = value; }
+        }
+
         public override async Task<object> RunAsync(CommandLineProcessor processor, IConsoleHost host)
         {
             var document = await RunAsync();
-            if (TryWriteFileOutput(host, () => document.ToJson()) == false)
-                return document;
-            return null; 
+            await TryWriteFileOutputAsync(host, () => document.ToJson()).ConfigureAwait(false);
+            return document; 
         }
 
         public async Task<SwaggerDocument> RunAsync()
         {
-            return await Task.Run(() =>
+            return await Task.Run(async () =>
             {
                 var generator = CreateGenerator();
-                return generator.Generate(ClassNames);
+                return await generator.GenerateAsync(ClassNames).ConfigureAwait(false);
             });
         }
 

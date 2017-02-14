@@ -9,11 +9,9 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Windows;
 using NJsonSchema.CodeGeneration.TypeScript;
 using NSwag;
-using NSwag.CodeGeneration.CodeGenerators;
-using NSwag.CodeGeneration.CodeGenerators.TypeScript;
+using NSwag.CodeGeneration.TypeScript;
 using NSwag.Commands;
 
 namespace NSwagStudio.ViewModels.CodeGenerators
@@ -77,6 +75,34 @@ namespace NSwagStudio.ViewModels.CodeGenerators
             }
         }
 
+        /// <summary>Gets the list of null values. </summary>
+        public TypeScriptNullValue[] NullValues
+        {
+            get
+            {
+                return Enum.GetNames(typeof(TypeScriptNullValue))
+                    .Select(t => (TypeScriptNullValue)Enum.Parse(typeof(TypeScriptNullValue), t))
+                    .ToArray();
+            }
+        }
+
+        /// <summary>Gets or sets the excluded type names (must be defined in an import or other namespace).</summary>
+        public string ExcludedTypeNames
+        {
+            get
+            {
+                return Command.ExcludedTypeNames != null ? string.Join(",", Command.ExcludedTypeNames) : "";
+            }
+            set
+            {
+                if (value != null)
+                    Command.ExcludedTypeNames = value.Split(',').Select(n => n.Trim()).Where(n => !string.IsNullOrEmpty(n)).ToArray();
+                else
+                    Command.ExcludedTypeNames = new string[] { };
+                RaisePropertyChanged(() => ExcludedTypeNames);
+            }
+        }
+
         public string ClassTypes
         {
             get { return _command.ClassTypes != null ? string.Join(",", _command.ClassTypes) : ""; }
@@ -104,27 +130,22 @@ namespace NSwagStudio.ViewModels.CodeGenerators
             set { Set(ref _clientCode, value); }
         }
 
-        public Task GenerateClientAsync(string swaggerData, string documentPath)
+        public Task GenerateClientAsync(SwaggerDocument document, string documentPath)
         {
             return RunTaskAsync(async () =>
             {
                 var code = string.Empty;
                 await Task.Run(async () =>
                 {
-                    if (!string.IsNullOrEmpty(swaggerData))
+                    if (document != null)
                     {
-                        Command.Input = SwaggerDocument.FromJson(swaggerData, documentPath);
+                        Command.Input = document;
                         code = await Command.RunAsync();
                         Command.Input = null;
                     }
                 });
                 ClientCode = code ?? string.Empty;
             });
-        }
-
-        public override void HandleException(Exception exception)
-        {
-            MessageBox.Show(exception.Message);
         }
     }
 }

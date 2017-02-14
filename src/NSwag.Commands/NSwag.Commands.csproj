@@ -52,18 +52,29 @@
     <Compile Include="Commands\FromSwaggerCommand.cs" />
     <Compile Include="Commands\JsonSchemaToTypeScriptCommand.cs" />
     <Compile Include="Commands\Document\ExecuteDocumentCommandBase.cs" />
+    <Compile Include="Commands\OperationGenerationMode.cs" />
     <Compile Include="Commands\SwaggerToCSharpClientCommand.cs" />
     <Compile Include="Commands\SwaggerToCSharpCommand.cs" />
     <Compile Include="Commands\SwaggerToCSharpControllerCommand.cs" />
     <Compile Include="Commands\SwaggerToTypeScriptClientCommand.cs" />
+    <Compile Include="Commands\VersionCommand.cs" />
     <Compile Include="Commands\WebApiToSwaggerCommandBase.cs" />
     <Compile Include="NSwagCommandProcessor.cs" />
     <Compile Include="NSwagDocumentBase.cs" />
+    <Compile Include="OperationGenerationModeConverter.cs" />
     <Compile Include="Properties\Annotations.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SwaggerGeneratorCollection.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\NSwag.CodeGeneration.CSharp\NSwag.CodeGeneration.CSharp.csproj">
+      <Project>{F0036DA5-5DD4-494C-91B0-37689E00511E}</Project>
+      <Name>NSwag.CodeGeneration.CSharp</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\NSwag.CodeGeneration.TypeScript\NSwag.CodeGeneration.TypeScript.csproj">
+      <Project>{9293CFCD-6C7B-43E0-9FBD-88753EBF64CC}</Project>
+      <Name>NSwag.CodeGeneration.TypeScript</Name>
+    </ProjectReference>
     <ProjectReference Include="..\NSwag.CodeGeneration\NSwag.CodeGeneration.csproj">
       <Project>{75b3f91d-687e-4fb3-ad45-ccfa3c406db4}</Project>
       <Name>NSwag.CodeGeneration</Name>
@@ -72,6 +83,14 @@
       <Project>{2e6174aa-fc75-4821-9e86-51b30568bec0}</Project>
       <Name>NSwag.Core</Name>
     </ProjectReference>
+    <ProjectReference Include="..\NSwag.SwaggerGeneration.WebApi\NSwag.SwaggerGeneration.WebApi.csproj">
+      <Project>{8A547CB0-930F-466D-92EB-E780FF14C0A6}</Project>
+      <Name>NSwag.SwaggerGeneration.WebApi</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\NSwag.SwaggerGeneration\NSwag.SwaggerGeneration.csproj">
+      <Project>{5EBE3EFF-9558-45F2-9C8F-5C8CFB74D574}</Project>
+      <Name>NSwag.SwaggerGeneration</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="NSwag.Commands.nuspec" />
@@ -79,20 +98,28 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="NConsole, Version=3.3.6170.27019, Culture=neutral, PublicKeyToken=0f839b9a5b9cbd65, processorArchitecture=MSIL">
-      <HintPath>..\packages\NConsole.3.3.6170.27019\lib\portable45-net45+win8+wp8+wpa81\NConsole.dll</HintPath>
+    <Reference Include="NConsole, Version=3.4.6206.26897, Culture=neutral, PublicKeyToken=0f839b9a5b9cbd65, processorArchitecture=MSIL">
+      <HintPath>..\packages\NConsole.3.4.6206.26897\lib\portable45-net45+win8+wp8+wpa81\NConsole.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.9.0.1\lib\portable-net45+wp80+win8+wpa81\Newtonsoft.Json.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="NJsonSchema, Version=6.2.6179.20107, Culture=neutral, PublicKeyToken=c2f9c3bdfae56102, processorArchitecture=MSIL">
-      <HintPath>..\packages\NJsonSchema.6.2.6179.20107\lib\portable45-net45+win8+wp8+wpa81\NJsonSchema.dll</HintPath>
+    <Reference Include="NJsonSchema, Version=8.3.6252.27806, Culture=neutral, PublicKeyToken=c2f9c3bdfae56102, processorArchitecture=MSIL">
+      <HintPath>..\packages\NJsonSchema.8.3.6252.27806\lib\portable45-net45+win8+wp8+wpa81\NJsonSchema.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="NJsonSchema.CodeGeneration, Version=6.2.6179.20107, Culture=neutral, PublicKeyToken=c2f9c3bdfae56102, processorArchitecture=MSIL">
-      <HintPath>..\packages\NJsonSchema.CodeGeneration.6.2.6179.20107\lib\portable45-net45+win8+wp8+wpa81\NJsonSchema.CodeGeneration.dll</HintPath>
+    <Reference Include="NJsonSchema.CodeGeneration, Version=8.3.6252.27823, Culture=neutral, PublicKeyToken=c2f9c3bdfae56102, processorArchitecture=MSIL">
+      <HintPath>..\packages\NJsonSchema.CodeGeneration.8.3.6252.27823\lib\portable45-net45+win8+wp8+wpa81\NJsonSchema.CodeGeneration.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="NJsonSchema.CodeGeneration.CSharp, Version=8.3.6252.27823, Culture=neutral, PublicKeyToken=c2f9c3bdfae56102, processorArchitecture=MSIL">
+      <HintPath>..\packages\NJsonSchema.CodeGeneration.CSharp.8.3.6252.27823\lib\portable45-net45+win8+wp8+wpa81\NJsonSchema.CodeGeneration.CSharp.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="NJsonSchema.CodeGeneration.TypeScript, Version=8.3.6252.27823, Culture=neutral, PublicKeyToken=c2f9c3bdfae56102, processorArchitecture=MSIL">
+      <HintPath>..\packages\NJsonSchema.CodeGeneration.TypeScript.8.3.6252.27823\lib\portable45-net45+win8+wp8+wpa81\NJsonSchema.CodeGeneration.TypeScript.dll</HintPath>
       <Private>True</Private>
     </Reference>
   </ItemGroup>

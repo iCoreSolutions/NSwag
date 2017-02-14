@@ -9,10 +9,8 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Windows;
 using NJsonSchema.CodeGeneration.CSharp;
 using NSwag;
-using NSwag.CodeGeneration.CodeGenerators;
 using NSwag.Commands;
 
 namespace NSwagStudio.ViewModels.CodeGenerators
@@ -79,16 +77,16 @@ namespace NSwagStudio.ViewModels.CodeGenerators
             set { Set(ref _clientCode, value); }
         }
 
-        public Task GenerateClientAsync(string swaggerData, string documentPath)
+        public Task GenerateClientAsync(SwaggerDocument document, string documentPath)
         {
             return RunTaskAsync(async () =>
             {
                 var code = string.Empty;
                 await Task.Run(async () =>
                 {
-                    if (!string.IsNullOrEmpty(swaggerData))
+                    if (document != null)
                     {
-                        Command.Input = SwaggerDocument.FromJson(swaggerData, documentPath);
+                        Command.Input = document;
                         code = await Command.RunAsync();
                         Command.Input = null;
                     }
@@ -96,11 +94,6 @@ namespace NSwagStudio.ViewModels.CodeGenerators
 
                 ClientCode = code ?? string.Empty;
             });
-        }
-
-        public override void HandleException(Exception exception)
-        {
-            MessageBox.Show(exception.Message);
         }
     }
 }

@@ -1,32 +1,36 @@
-﻿using System.Linq;
+﻿using System.Globalization;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NJsonSchema;
 
-namespace NSwag.Tests
+namespace NSwag.Tests.Specification
 {
     [TestClass]
     public class GeneralTests
     {
         [TestMethod]
-        public void When_Swagger_is_loaded_from_url_then_it_works()
+        public async Task When_Swagger_is_loaded_from_url_then_it_works()
         {
             //// Arrange
 
 
             //// Act
-            var document = SwaggerDocument.FromUrl("http://petstore.swagger.io/v2/swagger.json");
+            var document = await SwaggerDocument.FromUrlAsync("http://petstore.swagger.io/v2/swagger.json");
 
             //// Assert
             Assert.IsNotNull(document);
         }
 
         [TestMethod]
-        public void WhenConvertingAndBackThenItShouldBeTheSame()
+        public async Task WhenConvertingAndBackThenItShouldBeTheSame()
         {
             //// Arrange
             var json = _sampleServiceCode;
 
             //// Act
-            var document = SwaggerDocument.FromJson(json);
+            var document = await SwaggerDocument.FromJsonAsync(json);
             var json2 = document.ToJson();
             var reference = document.Paths["/pets"][SwaggerOperationMethod.Get].Responses["200"].Schema.Item.SchemaReference;
 
@@ -37,13 +41,13 @@ namespace NSwag.Tests
         }
 
         [TestMethod]
-        public void WhenGeneratingOperationIdsThenMissingIdsAreGenerated()
+        public async Task WhenGeneratingOperationIdsThenMissingIdsAreGenerated()
         {
             //// Arrange
             var json = _sampleServiceCode;
 
             //// Act
-            var document = SwaggerDocument.FromJson(json);
+            var document = await SwaggerDocument.FromJsonAsync(json);
             document.GenerateOperationIds();
 
             //// Assert
@@ -51,16 +55,38 @@ namespace NSwag.Tests
         }
 
         [TestMethod]
-        public void ExtensionDataTest()
+        public async Task ExtensionDataTest()
         {
             //// Arrange
             var json = _jsonVendorExtensionData;
 
             //// Act
-            var document = SwaggerDocument.FromJson(json);
+            var document = await SwaggerDocument.FromJsonAsync(json);
 
             //// Assert
             Assert.IsNotNull(document.Operations.First().Operation.Responses["202"].ExtensionData);
+        }
+
+        [TestMethod]
+        public async Task When_locale_is_not_english_then_types_are_correctly_serialized()
+        {
+            // https://github.com/NSwag/NSwag/issues/518
+
+            //// Arrange
+            CultureInfo ci = new CultureInfo("tr-TR");
+            Thread.CurrentThread.CurrentCulture = ci;
+            Thread.CurrentThread.CurrentUICulture = ci;
+            CultureInfo.DefaultThreadCurrentCulture = ci;
+
+            //// Act
+            var json = _sampleServiceCode;
+
+            //// Act
+            var document = await SwaggerDocument.FromJsonAsync(json);
+            var j = document.ToJson();
+
+            //// Assert
+            Assert.AreEqual(JsonObjectType.Integer, document.Definitions["Pet"].Properties["id"].Type);
         }
 
         private string _sampleServiceCode = 

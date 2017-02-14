@@ -6,9 +6,7 @@
 // <author>Rico Suter, mail@rsuter.com</author>
 //-----------------------------------------------------------------------
 
-using System;
 using System.Threading.Tasks;
-using System.Windows;
 using NSwag;
 
 namespace NSwagStudio.ViewModels.CodeGenerators
@@ -17,15 +15,12 @@ namespace NSwagStudio.ViewModels.CodeGenerators
     {
         private string _swaggerCode;
 
-        public async Task GenerateClientAsync(string swaggerData, string documentPath)
+        public async Task GenerateClientAsync(SwaggerDocument document, string documentPath)
         {
-            var code = !string.IsNullOrEmpty(swaggerData) ? await RunTaskAsync(() => SwaggerDocument.FromJson(swaggerData, documentPath)?.ToJson()) : string.Empty;
-            SwaggerCode = code ?? string.Empty;
-        }
-
-        public override void HandleException(Exception exception)
-        {
-            MessageBox.Show(exception.Message);
+            if (document != null)
+                SwaggerCode = await RunTaskAsync(Task.Run(() => document.ToJson()));
+            else
+                SwaggerCode = string.Empty;
         }
 
         /// <summary>Gets or sets the Swagger code. </summary>

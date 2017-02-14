@@ -10,8 +10,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using NConsole;
-using NSwag.CodeGeneration.CodeGenerators;
-using NSwag.CodeGeneration.CodeGenerators.CSharp;
+using NSwag.CodeGeneration;
+using NSwag.CodeGeneration.CSharp;
 
 #pragma warning disable 1591
 
@@ -38,13 +38,6 @@ namespace NSwag.Commands
             set { Settings.ConfigurationClass = value; }
         }
 
-        [Argument(Name = "ExceptionClass", IsRequired = false, Description = "The exception class (default 'SwaggerException', may use '{controller}' placeholder).")]
-        public string ExceptionClass
-        {
-            get { return Settings.ExceptionClass; }
-            set { Settings.ExceptionClass = value; }
-        }
-
         [Argument(Name = "GenerateClientClasses", IsRequired = false, Description = "Specifies whether generate client classes.")]
         public bool GenerateClientClasses
         {
@@ -66,13 +59,57 @@ namespace NSwag.Commands
             set { Settings.GenerateDtoTypes = value; }
         }
 
+        [Argument(Name = "InjectHttpClient", IsRequired = false, Description = "Specifies whether an HttpClient instance is injected.")]
+        public bool InjectHttpClient
+        {
+            get { return Settings.InjectHttpClient; }
+            set { Settings.InjectHttpClient = value; }
+        }
+
+        [Argument(Name = "ProtectedMethods", IsRequired = false, Description = "List of methods with a protected access modifier ('classname.methodname').")]
+        public string[] ProtectedMethods
+        {
+            get { return Settings.ProtectedMethods; }
+            set { Settings.ProtectedMethods = value; }
+        }
+
+        [Argument(Name = "GenerateExceptionClasses", IsRequired = false, Description = "Specifies whether to generate exception classes (default: true).")]
+        public bool GenerateExceptionClasses
+        {
+            get { return Settings.GenerateExceptionClasses; }
+            set { Settings.GenerateExceptionClasses = value; }
+        }
+
+        [Argument(Name = "ExceptionClass", IsRequired = false, Description = "The exception class (default 'SwaggerException', may use '{controller}' placeholder).")]
+        public string ExceptionClass
+        {
+            get { return Settings.ExceptionClass; }
+            set { Settings.ExceptionClass = value; }
+        }
+
         [Argument(Name = "UseHttpClientCreationMethod", IsRequired = false, Description = "Specifies whether to call CreateHttpClientAsync on the base class to create a new HttpClient.")]
         public bool UseHttpClientCreationMethod
         {
             get { return Settings.UseHttpClientCreationMethod; }
             set { Settings.UseHttpClientCreationMethod = value; }
         }
-        
+
+        [Argument(Name = "UseHttpRequestMessageCreationMethod", IsRequired = false,
+                  Description = "Specifies whether to call CreateHttpRequestMessageAsync on the base class to create a new HttpRequestMethod.")]
+        public bool UseHttpRequestMessageCreationMethod
+        {
+            get { return Settings.UseHttpRequestMessageCreationMethod; }
+            set { Settings.UseHttpRequestMessageCreationMethod = value; }
+        }
+
+        [Argument(Name = "UseBaseUrl", IsRequired = false,
+                  Description = "Specifies whether to use and expose the base URL (default: true).")]
+        public bool UseBaseUrl
+        {
+            get { return Settings.UseBaseUrl; }
+            set { Settings.UseBaseUrl = value; }
+        }
+
         [Argument(Name = "JsonConverters", IsRequired = false, Description = "Specifies the custom Json.NET converter types (optional, comma separated).")]
         public string[] JsonConverters
         {
@@ -80,12 +117,11 @@ namespace NSwag.Commands
             set { Settings.CSharpGeneratorSettings.JsonConverters = value; }
         }
 
-        [Argument(Name = "UseHttpRequestMessageCreationMethod", IsRequired = false, 
-                  Description = "Specifies whether to call CreateHttpRequestMessageAsync on the base class to create a new HttpRequestMethod.")]
-        public bool UseHttpRequestMessageCreationMethod
+        [Argument(Name = "ClientClassAccessModifier", IsRequired = false, Description = "The client class access modifier (default: public).")]
+        public string ClientClassAccessModifier
         {
-            get { return Settings.UseHttpRequestMessageCreationMethod; }
-            set { Settings.UseHttpRequestMessageCreationMethod = value; }
+            get { return Settings.ClientClassAccessModifier; }
+            set { Settings.ClientClassAccessModifier = value; }
         }
 
         [Argument(Name = "GenerateContractsOutput", IsRequired = false,
@@ -103,15 +139,16 @@ namespace NSwag.Commands
         {
             var result = await RunAsync();
             foreach (var pair in result)
-                TryWriteFileOutput(pair.Key, host, () => pair.Value);
+                await TryWriteFileOutputAsync(pair.Key, host, () => pair.Value).ConfigureAwait(false);
             return result;
         }
 
         public async Task<Dictionary<string, string>> RunAsync()
         {
-            return await Task.Run(() =>
+            return await Task.Run(async () =>
             {
-                var clientGenerator = new SwaggerToCSharpClientGenerator(InputSwaggerDocument, Settings);
+                var document = await GetInputSwaggerDocument().ConfigureAwait(false);
+                var clientGenerator = new SwaggerToCSharpClientGenerator(document, Settings);
 
                 if (GenerateContractsOutput)
                 {

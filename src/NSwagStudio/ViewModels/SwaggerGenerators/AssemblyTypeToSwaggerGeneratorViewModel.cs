@@ -14,8 +14,9 @@ using System.Threading.Tasks;
 using Microsoft.Win32;
 using MyToolkit.Command;
 using NJsonSchema;
-using NSwag.CodeGeneration.Commands;
-using NSwag.CodeGeneration.SwaggerGenerators;
+using NSwag;
+using NSwag.Commands;
+using NSwag.SwaggerGeneration;
 
 namespace NSwagStudio.ViewModels.SwaggerGenerators
 {
@@ -135,14 +136,21 @@ namespace NSwagStudio.ViewModels.SwaggerGenerators
                 AllClassNames = await Task.Run(() =>
                 {
                     var generator = new AssemblyTypeToSwaggerGenerator(Command.Settings);
-                    return generator.GetClasses();
+                    return generator.GetExportedClassNames();
                 });
             });
         }
 
         public async Task<string> GenerateSwaggerAsync()
         {
-            return await RunTaskAsync(async () => (await Command.RunAsync()).ToJson());
+            return await RunTaskAsync(async () =>
+            {
+                return await Task.Run(async () =>
+                {
+                    var document = (SwaggerDocument)await Command.RunAsync(null, null).ConfigureAwait(false);
+                    return document?.ToJson();
+                });
+            });
         }
     }
 }

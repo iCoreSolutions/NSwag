@@ -13,8 +13,8 @@ using NConsole;
 using Newtonsoft.Json;
 using NJsonSchema;
 using NJsonSchema.Infrastructure;
-using NSwag.CodeGeneration.SwaggerGenerators.WebApi;
 using NSwag.Commands.Base;
+using NSwag.SwaggerGeneration.WebApi;
 
 #pragma warning disable 1591
 
@@ -105,7 +105,14 @@ namespace NSwag.Commands
             set { Settings.GenerateKnownTypes = value; }
         }
 
-        [Argument(Name = "AddMissingPathParameters", IsRequired = false, Description = "Specifies whether to add path parameters which are missing in the action method (default: false).")]
+        [Argument(Name = "GenerateXmlObjects", IsRequired = false, Description = "Generate xmlObject representation for definitions (default: false).")]
+        public bool GenerateXmlObjects
+        {
+            get { return Settings.GenerateXmlObjects; }
+            set { Settings.GenerateXmlObjects = value; }
+        }
+
+        [Argument(Name = "AddMissingPathParameters", IsRequired = false, Description = "Specifies whether to add path parameters which are missing in the action method (default: true).")]
         public bool AddMissingPathParameters
         {
             get { return Settings.AddMissingPathParameters; }
@@ -149,19 +156,18 @@ namespace NSwag.Commands
         public override async Task<object> RunAsync(CommandLineProcessor processor, IConsoleHost host)
         {
             var service = await RunAsync();
-            if (TryWriteFileOutput(host, () => service.ToJson()) == false)
-                return service;
-            return null;
+            await TryWriteFileOutputAsync(host, () => service.ToJson()).ConfigureAwait(false);
+            return service;
         }
 
         public async Task<SwaggerDocument> RunAsync()
         {
-            return await Task.Run(() =>
+            return await Task.Run(async () =>
             {
                 if (!string.IsNullOrEmpty(DocumentTemplate))
                 {
-                    if (DynamicApis.FileExists(DocumentTemplate))
-                        Settings.DocumentTemplate = DynamicApis.FileReadAllText(DocumentTemplate);
+                    if (await DynamicApis.FileExistsAsync(DocumentTemplate).ConfigureAwait(false))
+                        Settings.DocumentTemplate = await DynamicApis.FileReadAllTextAsync(DocumentTemplate).ConfigureAwait(false);
                     else
                         Settings.DocumentTemplate = DocumentTemplate;
                 }
@@ -173,12 +179,19 @@ namespace NSwag.Commands
                 if (!controllerNames.Any() && Settings.AssemblyPaths?.Length > 0)
                     controllerNames = generator.GetControllerClasses().ToList();
 
-                var document = generator.GenerateForControllers(controllerNames);
+                var document = await generator.GenerateForControllersAsync(controllerNames).ConfigureAwait(false);
 
                 if (ServiceHost == ".")
                     document.Host = string.Empty;
                 else if (!string.IsNullOrEmpty(ServiceHost))
                     document.Host = ServiceHost;
+
+                if (!string.IsNullOrEmpty(InfoTitle))
+                    document.Info.Title = InfoTitle;
+                if (!string.IsNullOrEmpty(InfoVersion))
+                    document.Info.Version = InfoVersion;
+                if (!string.IsNullOrEmpty(InfoDescription))
+                    document.Info.Description = InfoDescription;
 
                 if (ServiceSchemes != null && ServiceSchemes.Any())
                     document.Schemes = ServiceSchemes.Select(s => (SwaggerSchema)Enum.Parse(typeof(SwaggerSchema), s, true)).ToList();

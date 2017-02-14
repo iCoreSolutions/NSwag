@@ -8,7 +8,7 @@
 
 using System.Threading.Tasks;
 using NConsole;
-using NSwag.CodeGeneration.CodeGenerators.CSharp;
+using NSwag.CodeGeneration.CSharp;
 
 #pragma warning disable 1591
 
@@ -31,16 +31,16 @@ namespace NSwag.Commands
         public override async Task<object> RunAsync(CommandLineProcessor processor, IConsoleHost host)
         {
             var code = await RunAsync();
-            if (TryWriteFileOutput(host, () => code) == false)
-                return code;
-            return null;
+            await TryWriteFileOutputAsync(host, () => code).ConfigureAwait(false);
+            return code;
         }
 
         public async Task<string> RunAsync()
         {
-            return await Task.Run(() =>
+            return await Task.Run(async () =>
             {
-                var clientGenerator = new SwaggerToCSharpWebApiControllerGenerator(InputSwaggerDocument, Settings);
+                var document = await GetInputSwaggerDocument().ConfigureAwait(false);
+                var clientGenerator = new SwaggerToCSharpWebApiControllerGenerator(document, Settings);
                 return clientGenerator.GenerateFile();
             });
         }

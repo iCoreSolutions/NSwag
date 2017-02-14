@@ -1,4 +1,12 @@
-﻿using System.ComponentModel;
+﻿//-----------------------------------------------------------------------
+// <copyright file="FromSwaggerCommand.cs" company="NSwag">
+//     Copyright (c) Rico Suter. All rights reserved.
+// </copyright>
+// <license>https://github.com/NSwag/NSwag/blob/master/LICENSE.md</license>
+// <author>Rico Suter, mail@rsuter.com</author>
+//-----------------------------------------------------------------------
+
+using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using NConsole;
@@ -8,8 +16,7 @@ using NSwag.Commands.Base;
 
 namespace NSwag.Commands
 {
-    /// <summary></summary>
-    /// <seealso cref="NSwag.Commands.Base.OutputCommandBase" />
+    /// <summary>Reads a Swagger specification from JSON or an URL.</summary>
     public class FromSwaggerCommand : OutputCommandBase, INotifyPropertyChanged
     {
         private string _swagger;
@@ -52,9 +59,11 @@ namespace NSwag.Commands
         public async Task<SwaggerDocument> RunAsync()
         {
             if (!string.IsNullOrEmpty(Swagger))
-                return await Task.Run(() => SwaggerDocument.FromJson(Swagger));
+                return await SwaggerDocument.FromJsonAsync(Swagger).ConfigureAwait(false);
+            else if (Url.StartsWith("http://") || Url.StartsWith("https://"))
+                return await SwaggerDocument.FromUrlAsync(Url).ConfigureAwait(false);
             else
-                return await Task.Run(() => SwaggerDocument.FromUrl(Url));
+                return await SwaggerDocument.FromFileAsync(Url).ConfigureAwait(false);
         }
 
         /// <summary>Occurs when property changed.</summary>

@@ -1,10 +1,11 @@
 ﻿using System;
+using System.Threading.Tasks;
 using System.Web.Http;
 using System.Windows;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using NSwag.CodeGeneration.CodeGenerators;
-using NSwag.CodeGeneration.CodeGenerators.TypeScript;
-using NSwag.CodeGeneration.SwaggerGenerators.WebApi;
+using NSwag.CodeGeneration.OperationNameGenerators;
+using NSwag.CodeGeneration.TypeScript;
+using NSwag.SwaggerGeneration.WebApi;
 
 namespace NSwag.CodeGeneration.Tests.OperationNameGenerator
 {
@@ -27,14 +28,14 @@ namespace NSwag.CodeGeneration.Tests.OperationNameGenerator
         }
 
         [TestMethod]
-        public void When_two_methods_have_same_name_then_generated_id_is_still_different()
+        public async Task When_two_methods_have_same_name_then_generated_id_is_still_different()
         {
             //// Arrange
-            var generator = new SwaggerGenerators.WebApi.WebApiToSwaggerGenerator(new WebApiToSwaggerGeneratorSettings());
-            var document = generator.GenerateForController<PointController>();
+            var generator = new WebApiToSwaggerGenerator(new WebApiToSwaggerGeneratorSettings());
+            var document = await generator.GenerateForControllerAsync<PointController>();
             var codeGenerator = new SwaggerToTypeScriptClientGenerator(document, new SwaggerToTypeScriptClientGeneratorSettings
             {
-                OperationGenerationMode = OperationGenerationMode.MultipleClientsFromOperationId
+                OperationNameGenerator = new MultipleClientsFromOperationIdOperationNameGenerator()
             });
 
             //// Act

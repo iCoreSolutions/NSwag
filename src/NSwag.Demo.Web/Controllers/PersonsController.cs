@@ -9,8 +9,8 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Web.Http;
 using NSwag.Annotations;
-using NSwag.CodeGeneration.SwaggerGenerators.WebApi;
 using NSwag.Demo.Web.Models;
+using NSwag.SwaggerGeneration.WebApi;
 
 namespace NSwag.Demo.Web.Controllers
 {
@@ -100,13 +100,13 @@ namespace NSwag.Demo.Web.Controllers
 
         [HttpGet]
         [SwaggerIgnore]
-        public HttpResponseMessage Swagger()
+        public async Task<HttpResponseMessage> Swagger()
         {
             var generator = new WebApiToSwaggerGenerator(new WebApiAssemblyToSwaggerGeneratorSettings
             {
                 DefaultUrlTemplate = Configuration.Routes.First(r => !string.IsNullOrEmpty(r.RouteTemplate)).RouteTemplate
             });
-            var document = generator.GenerateForController(GetType());
+            var document = await generator.GenerateForControllerAsync(GetType());
             return new HttpResponseMessage { Content = new StringContent(document.ToJson(), Encoding.UTF8) };
         }
     }

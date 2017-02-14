@@ -68,16 +68,15 @@ namespace NSwag.Commands
             set { Settings.DictionaryType = value; }
         }
 
-        public override Task<object> RunAsync(CommandLineProcessor processor, IConsoleHost host)
+        public override async Task<object> RunAsync(CommandLineProcessor processor, IConsoleHost host)
         {
-            var schema = JsonSchema4.FromJson(InputJson);
+            var inputJson = await GetInputJsonAsync().ConfigureAwait(false);
+            var schema = await JsonSchema4.FromJsonAsync(inputJson).ConfigureAwait(false);
             var generator = new CSharpGenerator(schema, Settings);
 
-            var code = generator.GenerateFile(Name); 
-            if (TryWriteFileOutput(host, () => code) == false)
-                return Task.FromResult<object>(code);
-
-            return Task.FromResult<object>(null);
+            var code = generator.GenerateFile(Name);
+            await TryWriteFileOutputAsync(host, () => code).ConfigureAwait(false);
+            return code;
         }
     }
 }

@@ -62,8 +62,8 @@
       <HintPath>..\packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="NJsonSchema, Version=6.2.6179.20107, Culture=neutral, PublicKeyToken=c2f9c3bdfae56102, processorArchitecture=MSIL">
-      <HintPath>..\packages\NJsonSchema.6.2.6179.20107\lib\net45\NJsonSchema.dll</HintPath>
+    <Reference Include="NJsonSchema, Version=8.3.6252.27806, Culture=neutral, PublicKeyToken=c2f9c3bdfae56102, processorArchitecture=MSIL">
+      <HintPath>..\packages\NJsonSchema.8.3.6252.27806\lib\net45\NJsonSchema.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Owin, Version=1.0.0.0, Culture=neutral, PublicKeyToken=f0ebd12fd5e55cc5, processorArchitecture=MSIL">
@@ -108,6 +108,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App_Start\WebApiConfig.cs" />
+    <Compile Include="Controllers\SwaggerController.cs" />
     <Compile Include="Models\GenericRequest.cs" />
     <Compile Include="Models\GeoPoint.cs" />
     <Compile Include="Models\Exceptions\PersonNotFoundException.cs" />
@@ -124,7 +125,9 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="packages.config" />
+    <Content Include="packages.config">
+      <SubType>Designer</SubType>
+    </Content>
     <Content Include="ApplicationInsights.config">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -167,9 +170,21 @@
       <Project>{75B3F91D-687E-4FB3-AD45-CCFA3C406DB4}</Project>
       <Name>NSwag.CodeGeneration</Name>
     </ProjectReference>
+    <ProjectReference Include="..\NSwag.Core\NSwag.Core.csproj">
+      <Project>{2E6174AA-FC75-4821-9E86-51B30568BEC0}</Project>
+      <Name>NSwag.Core</Name>
+    </ProjectReference>
     <ProjectReference Include="..\NSwag.Demo.Client\NSwag.Demo.Client.csproj">
       <Project>{267D875B-3481-465D-AD2C-4BB18EB911BA}</Project>
       <Name>NSwag.Demo.Client</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\NSwag.SwaggerGeneration.WebApi\NSwag.SwaggerGeneration.WebApi.csproj">
+      <Project>{8A547CB0-930F-466D-92EB-E780FF14C0A6}</Project>
+      <Name>NSwag.SwaggerGeneration.WebApi</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\NSwag.SwaggerGeneration\NSwag.SwaggerGeneration.csproj">
+      <Project>{5EBE3EFF-9558-45F2-9C8F-5C8CFB74D574}</Project>
+      <Name>NSwag.SwaggerGeneration</Name>
     </ProjectReference>
   </ItemGroup>
   <PropertyGroup>

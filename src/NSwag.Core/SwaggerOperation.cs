@@ -11,6 +11,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using NSwag.Collections;
 
 namespace NSwag
 {
@@ -21,8 +22,22 @@ namespace NSwag
         public SwaggerOperation()
         {
             Tags = new List<string>();
-            Parameters = new List<SwaggerParameter>();
-            Responses = new Dictionary<string, SwaggerResponse>();
+
+            var parameters = new ObservableCollection<SwaggerParameter>();
+            parameters.CollectionChanged += (sender, args) =>
+            {
+                foreach (var response in Parameters)
+                    response.Parent = this;
+            };
+            Parameters = parameters;
+
+            var responses = new ObservableDictionary<string, SwaggerResponse>();
+            responses.CollectionChanged += (sender, args) =>
+            {
+                foreach (var response in Responses.Values)
+                    response.Parent = this;
+            };
+            Responses = responses; 
         }
 
         /// <summary>Gets the parent operations list.</summary>
@@ -63,7 +78,7 @@ namespace NSwag
 
         /// <summary>Gets or sets the parameters.</summary>
         [JsonProperty(PropertyName = "parameters", DefaultValueHandling = DefaultValueHandling.Ignore)]
-        public List<SwaggerParameter> Parameters { get; set; }
+        public IList<SwaggerParameter> Parameters { get; }
 
         /// <summary>Gets the actual parameters (a combination of all inherited and local parameters).</summary>
         [JsonIgnore]
@@ -72,7 +87,9 @@ namespace NSwag
             get
             {
                 var allParameters = Parent?.Parameters == null ? Parameters :
-                    Parameters.Concat(Parent.Parameters.Where(p => Parameters.All(op => op.Name != p.Name && op.Kind != p.Kind)));
+                    Parameters.Concat(Parent.Parameters)
+                    .GroupBy(p => p.Name + "|" + p.Kind)
+                    .Select(p => p.First());
 
                 return new ReadOnlyCollection<SwaggerParameter>(allParameters
                     .Select(p => p.ActualSchema is SwaggerParameter ? (SwaggerParameter)p.ActualSchema : p)
@@ -82,7 +99,7 @@ namespace NSwag
 
         /// <summary>Gets or sets the HTTP Status Code/Response pairs.</summary>
         [JsonProperty(PropertyName = "responses", Required = Required.Always, DefaultValueHandling = DefaultValueHandling.Ignore)]
-        public Dictionary<string, SwaggerResponse> Responses { get; set; }
+        public IDictionary<string, SwaggerResponse> Responses { get; }
 
         /// <summary>Gets or sets a value indicating whether the operation is deprecated.</summary>
         [JsonProperty(PropertyName = "deprecated", DefaultValueHandling = DefaultValueHandling.Ignore)]

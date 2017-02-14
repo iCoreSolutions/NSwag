@@ -11,17 +11,20 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
-using NJsonSchema;
 using NJsonSchema.Generation;
 using NSwag.CodeGeneration.Infrastructure;
-using NSwag.CodeGeneration.Utilities;
+using NSwag.SwaggerGeneration.Utilities;
 
 #if !FullNet
+using NJsonSchema;
+using NJsonSchema.Infrastructure;
 using System.Runtime.Loader;
+using NSwag.SwaggerGeneration;
 #endif
 
-namespace NSwag.CodeGeneration.SwaggerGenerators
+namespace NSwag.SwaggerGeneration
 {
     /// <summary>Generates a <see cref="SwaggerDocument"/> from a Web API controller or type which is located in a .NET assembly.</summary>
     public class AssemblyTypeToSwaggerGenerator : AssemblyTypeToSwaggerGeneratorBase
@@ -34,16 +37,16 @@ namespace NSwag.CodeGeneration.SwaggerGenerators
 
         /// <summary>Gets the available controller classes from the given assembly.</summary>
         /// <returns>The controller classes.</returns>
-        public override string[] GetClasses()
+        public override string[] GetExportedClassNames()
         {
             if (File.Exists(Settings.AssemblyPath))
             {
 #if FullNet
                 using (var isolated = new AppDomainIsolation<NetAssemblyLoader>(Path.GetDirectoryName(Path.GetFullPath(Settings.AssemblyPath)), Settings.AssemblyConfig))
-                    return isolated.Object.GetClasses(Settings.AssemblyPath, GetAllReferencePaths(Settings));
+                    return isolated.Object.GetExportedClassNames(Settings.AssemblyPath, GetAllReferencePaths(Settings));
 #else
                 var loader = new NetAssemblyLoader();
-                return loader.GetClasses(Settings.AssemblyPath, GetAllReferencePaths(Settings));
+                return loader.GetExportedClassNames(Settings.AssemblyPath, GetAllReferencePaths(Settings));
 #endif
             }
             else
@@ -53,15 +56,19 @@ namespace NSwag.CodeGeneration.SwaggerGenerators
         /// <summary>Generates the Swagger definition for the given classes without operations (used for class generation).</summary>
         /// <param name="classNames">The class names.</param>
         /// <returns>The Swagger definition.</returns>
-        public override SwaggerDocument Generate(string[] classNames)
+        public override async Task<SwaggerDocument> GenerateAsync(string[] classNames)
         {
 #if FullNet
             using (var isolated = new AppDomainIsolation<NetAssemblyLoader>(Path.GetDirectoryName(Path.GetFullPath(Settings.AssemblyPath)), Settings.AssemblyConfig))
-                return SwaggerDocument.FromJson(isolated.Object.FromAssemblyType(classNames, JsonConvert.SerializeObject(Settings)));
+            {
+                var json = await Task.Run(() => isolated.Object.FromAssemblyType(classNames, JsonConvert.SerializeObject(Settings))).ConfigureAwait(false);
+                return await SwaggerDocument.FromJsonAsync(json).ConfigureAwait(false);
+            }
+
 #else
             var loader = new NetAssemblyLoader();
             var data = loader.FromAssemblyType(classNames, JsonConvert.SerializeObject(Settings));
-            return SwaggerDocument.FromJson(data);
+            return await SwaggerDocument.FromJsonAsync(data).ConfigureAwait(false);
 #endif
         }
 
@@ -77,6 +84,11 @@ namespace NSwag.CodeGeneration.SwaggerGenerators
         {
             internal string FromAssemblyType(string[] classNames, string settingsData)
             {
+                return FromAssemblyTypeAsync(classNames, settingsData).GetAwaiter().GetResult();
+            }
+
+            private async Task<string> FromAssemblyTypeAsync(string[] classNames, string settingsData)
+            {
                 var document = new SwaggerDocument();
                 var settings = JsonConvert.DeserializeObject<AssemblyTypeToSwaggerGeneratorSettings>(settingsData);
 
@@ -88,27 +100,40 @@ namespace NSwag.CodeGeneration.SwaggerGenerators
 #if FullNet
                 var assembly = Assembly.LoadFrom(settings.AssemblyPath);
 #else
-                var assembly = Context.LoadFromAssemblyPath(settings.AssemblyPath);
+                var currentDirectory = await DynamicApis.DirectoryGetCurrentDirectoryAsync().ConfigureAwait(false);
+                var assembly = Context.LoadFromAssemblyPath(PathUtilities.MakeAbsolutePath(settings.AssemblyPath, currentDirectory));
 #endif
-                foreach (var className in classNames)
+
+                var allExportedClassNames = GetExportedClassNames(assembly);
+                var matchedClassNames = classNames
+                    .SelectMany(n => PathUtilities.FindWildcardMatches(n, allExportedClassNames, '.'))
+                    .Distinct();
+
+                foreach (var className in matchedClassNames)
                 {
                     var type = assembly.GetType(className);
-                    var schema = generator.Generate(type, schemaResolver);
-                    document.Definitions[type.Name] = schema;
+                    await generator.GenerateAsync(type, schemaResolver).ConfigureAwait(false);
                 }
 
                 return document.ToJson();
             }
 
-            internal string[] GetClasses(string assemblyPath, IEnumerable<string> referencePaths)
+            internal string[] GetExportedClassNames(string assemblyPath, IEnumerable<string> referencePaths)
             {
                 RegisterReferencePaths(referencePaths);
 
 #if FullNet
                 var assembly = Assembly.LoadFrom(assemblyPath);
 #else
-                var assembly = Context.LoadFromAssemblyPath(assemblyPath);
+                var currentDirectory = DynamicApis.DirectoryGetCurrentDirectoryAsync().GetAwaiter().GetResult();
+                var assembly = Context.LoadFromAssemblyPath(PathUtilities.MakeAbsolutePath(assemblyPath, currentDirectory));
 #endif
+
+                return GetExportedClassNames(assembly);
+            }
+
+            private static string[] GetExportedClassNames(Assembly assembly)
+            {
                 return assembly.ExportedTypes
                     .Select(t => t.FullName)
                     .OrderBy(t => t)

@@ -5,7 +5,6 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:converters="clr-namespace:MyToolkit.Converters;assembly=MyToolkit.Extended"
              xmlns:avalonedit="http://icsharpcode.net/sharpdevelop/avalonedit"
-             xmlns:views="clr-namespace:NSwagStudio.Views"
              xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
              xmlns:codeGenerators="clr-namespace:NSwagStudio.ViewModels.CodeGenerators"
              xmlns:controls="clr-namespace:NSwagStudio.Controls"
@@ -34,7 +33,8 @@
                     <TextBox Text="{Binding Command.Namespace, Mode=TwoWay}" Margin="0,0,0,12" />
                     
                     <CheckBox IsChecked="{Binding Command.GenerateContractsOutput, Mode=TwoWay}" 
-                                  Content="Generate contracts output" Margin="0,0,0,6" />
+                              Content="Generate contracts output" Margin="0,0,0,6" />
+                    
                     <StackPanel Visibility="{Binding Command.GenerateContractsOutput, Converter={StaticResource VisibilityConverter}}">
                         <TextBlock Text="Contracts Namespace" FontWeight="Bold" Margin="0,0,0,6" />
                         <TextBox Text="{Binding Command.ContractsNamespace, Mode=TwoWay}" Margin="0,0,0,12" />
@@ -46,8 +46,29 @@
                     <TextBlock Text="Custom Json.NET converter types (optional, multiple on separate lines)" FontWeight="Bold" Margin="0,0,0,6" />
                     <TextBox Text="{Binding Command.JsonConverters, Mode=TwoWay, Converter={StaticResource StringArrayConverter}}" Height="52" AcceptsReturn="True" VerticalScrollBarVisibility="Visible" Margin="0,0,0,12" />
 
-                    <TextBlock Text="Exception class name (may contain the '{controller}' placeholder)" FontWeight="Bold" Margin="0,0,0,6" />
-                    <TextBox Text="{Binding Command.ExceptionClass, Mode=TwoWay}" Margin="0,0,0,12" />
+                    <CheckBox IsChecked="{Binding Command.GenerateExceptionClasses, Mode=TwoWay}" 
+                              Content="Generate exception classes (when disabled, exception classes must be imported)" Margin="0,0,0,6" />
+
+                    <StackPanel Visibility="{Binding Command.GenerateExceptionClasses, Converter={StaticResource VisibilityConverter}}">
+                        <TextBlock Text="Exception class name (may contain the '{controller}' placeholder)" FontWeight="Bold" Margin="0,0,0,6" />
+                        <TextBox Text="{Binding Command.ExceptionClass, Mode=TwoWay}" Margin="0,0,0,12" />
+                    </StackPanel>
+
+                    <CheckBox IsChecked="{Binding Command.WrapResponses, Mode=TwoWay}" 
+                              Content="Wrap success responses to allow full response access (experimental)" Margin="0,0,0,6" />
+
+                    <StackPanel Visibility="{Binding Command.WrapResponses, Converter={StaticResource VisibilityConverter}}">
+                        <CheckBox IsChecked="{Binding Command.GenerateResponseClasses, Mode=TwoWay}" 
+                                  Content="Generate response classes (when disabled, response classes must be imported)" Margin="0,0,0,6" />
+
+                        <StackPanel Visibility="{Binding Command.GenerateResponseClasses, Converter={StaticResource VisibilityConverter}}">
+                            <TextBlock Text="Response class name (may contain the '{controller}' placeholder)" FontWeight="Bold" Margin="0,0,0,6" />
+                            <TextBox Text="{Binding Command.ResponseClass, Mode=TwoWay}" Margin="0,0,0,12" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <CheckBox IsChecked="{Binding Command.GenerateOptionalParameters, Mode=TwoWay}" 
+                              Content="Generate optional parameters (reorder parameters (required first, optional at the end) and generate optional C# parameters)" Margin="0,0,0,6" />
 
                     <GroupBox Header="Client" Margin="0,0,0,12">
                         <StackPanel Margin="4,8,4,-8">
@@ -58,11 +79,21 @@
                                 <TextBlock Text="Class Name" FontWeight="Bold" Margin="0,0,0,6" />
                                 <TextBox Text="{Binding Command.ClassName, Mode=TwoWay}" Margin="0,0,0,12" />
 
+                                <TextBlock Text="Client class access modifier" FontWeight="Bold" Margin="0,0,0,6" />
+                                <TextBox Text="{Binding Command.ClientClassAccessModifier, Mode=TwoWay}" Margin="0,0,0,12" />
+
+                                <CheckBox IsChecked="{Binding Command.UseBaseUrl, Mode=TwoWay}" 
+                                          Content="Use and expose the base URL" Margin="0,0,0,12" />
+
                                 <TextBlock Text="Base Class Name (optional)" FontWeight="Bold" Margin="0,0,0,6" />
                                 <TextBox Text="{Binding Command.ClientBaseClass, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12" />
 
+                                <CheckBox IsChecked="{Binding Command.InjectHttpClient, Mode=TwoWay}" 
+                                          Content="Inject HttpClient via constructor (life cycle is managed by the caller)" Margin="0,0,0,12" />
+
                                 <StackPanel Visibility="{Binding Command.ClientBaseClass, Converter={StaticResource VisibilityConverter}}">
-                                    <CheckBox IsChecked="{Binding Command.UseHttpClientCreationMethod, Mode=TwoWay}" Margin="0,0,0,12">
+                                    <CheckBox IsChecked="{Binding Command.UseHttpClientCreationMethod, Mode=TwoWay}" Margin="0,0,0,12" 
+                                              Visibility="{Binding Command.InjectHttpClient, Converter={StaticResource NotConverter}}">
                                         <TextBlock Text="Call the CreateHttpClientAsync method on the client base class to create a new HttpClient instance" TextWrapping="Wrap" />
                                     </CheckBox>
 
@@ -81,10 +112,13 @@
                                         The {controller} placeholder of the Class Name is replaced by generated client name (depends on the OperationGenerationMode strategy).
                                 </TextBlock>
                                 <ComboBox SelectedItem="{Binding Command.OperationGenerationMode, Mode=TwoWay}" 
-                                              ItemsSource="{Binding OperationGenerationModes}" Margin="0,0,0,12" />
+                                          ItemsSource="{Binding OperationGenerationModes}" Margin="0,0,0,12" />
 
                                 <CheckBox IsChecked="{Binding Command.GenerateClientInterfaces, Mode=TwoWay}" 
-                                              Content="Generate Client Interfaces" Margin="0,0,0,12" />
+                                          Content="Generate Client Interfaces" Margin="0,0,0,12" />
+
+                                <TextBlock Text="Methods with a protected access modifier to use in partial methods ('classname.methodname', comma separated)" FontWeight="Bold" Margin="0,0,0,6" />
+                                <TextBox Text="{Binding ProtectedMethods, Mode=TwoWay}" Margin="0,0,0,12" />
                             </StackPanel>
                         </StackPanel>
                     </GroupBox>
@@ -126,6 +160,9 @@
                                 <ComboBox SelectedItem="{Binding Command.ClassStyle, Mode=TwoWay}" 
                                               ItemsSource="{Binding ClassStyles}" Margin="0,0,0,12" />
                             </StackPanel>
+
+                            <TextBlock Text="Excluded Type Names (must be defined in another namespace)." FontWeight="Bold" Margin="0,0,0,6" />
+                            <TextBox Text="{Binding ExcludedTypeNames, Mode=TwoWay}" Margin="0,0,0,12" />
                         </StackPanel>
                     </GroupBox>
 

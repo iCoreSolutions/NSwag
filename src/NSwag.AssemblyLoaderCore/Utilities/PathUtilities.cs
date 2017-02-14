@@ -13,7 +13,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace NSwag.CodeGeneration.Utilities
+namespace NSwag.SwaggerGeneration.Utilities
 {
     // TODO: Move to MyToolkit
 
@@ -47,21 +47,7 @@ namespace NSwag.CodeGeneration.Utilities
                     var rootPath = rootIndex >= 0 ? path.Substring(0, rootIndex + 1) : Directory.GetCurrentDirectory();
                     var files = Directory.GetFiles(rootPath, "*", SearchOption.AllDirectories);
 
-                    var regex = new Regex(
-                        "^" + 
-                        Regex.Escape(path//.Substring(rootIndex + 1)
-                        .Replace("**/", "__starstar__")
-                        .Replace("**\\", "__starstar__")
-                        .Replace("/", "__del__")
-                        .Replace("\\", "__del__")
-                        .Replace("*", "__star__"))
-                        .Replace("__del__", "([\\\\/])")
-                        .Replace("__starstar__", "((.*?)[/\\\\])")
-                        .Replace("__star__", "([^\\/]*?)") + "$");
-
-                    allFiles.AddRange(files
-                        .Where(f => regex.Match(f).Success)
-                        .Select(Path.GetFullPath));
+                    allFiles.AddRange(FindWildcardMatches(path, files.Select(f => f.Replace("\\", "/")), '/').Select(Path.GetFullPath));
                 }
                 else
                     allFiles.Add(path);
@@ -70,17 +56,39 @@ namespace NSwag.CodeGeneration.Utilities
             return allFiles.Distinct();
         }
 
+        /// <summary>Finds the wildcard matches.</summary>
+        /// <param name="selector">The selector.</param>
+        /// <param name="items">The items.</param>
+        /// <param name="delimiter">The delimiter.</param>
+        /// <returns>The matches.</returns>
+        public static IEnumerable<string> FindWildcardMatches(string selector, IEnumerable<string> items, char delimiter)
+        {
+            var escapedDelimiter = Regex.Escape(delimiter.ToString());
+
+            var regex = new Regex(
+                "^" + Regex.Escape(selector
+                    .Replace(delimiter.ToString(), "__del__")
+                    .Replace("**", "__starstar__")
+                    .Replace("*", "__star__"))
+                .Replace("__del__", "(" + escapedDelimiter + ")")
+                .Replace("__starstar__", "(.*?)")
+                .Replace("__star__", "([^" + escapedDelimiter + "]*?)") + "$");
+
+            return items.Where(i => regex.Match(i).Success);
+        }
+
         /// <summary>Converts a relative path to an absolute path.</summary>
         /// <param name="relativePath">The relative path.</param>
         /// <param name="relativeTo">The current directory.</param>
         /// <returns>The absolute path.</returns>
         public static string MakeAbsolutePath(string relativePath, string relativeTo)
         {
+            // TODO: Rename to ToAbsolutePath, switch parameters
             if (Path.IsPathRooted(relativePath))
-                return relativePath; 
+                return relativePath;
 
             var absolutePath = Path.Combine(relativeTo, relativePath);
-            return Path.GetFullPath(new Uri(absolutePath).LocalPath);
+            return Path.GetFullPath(absolutePath);
         }
 
         /// <summary>Converts an absolute path to a relative path if possible.</summary>
