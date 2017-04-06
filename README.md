@@ -1,9 +1,12 @@
 ## NSwag: The Swagger (Open API) toolchain for .NET, Web API and TypeScript
 
+**v10 will be released soon. Please check out the [changelog](https://github.com/NSwag/NSwag/blob/master/CHANGELOG.md) and test with the latest CI artifacts.**
+
 [![NuGet Version](https://img.shields.io/nuget/v/NSwag.Core.svg)](https://www.nuget.org/packages?q=NSwag)
 [![npm](https://img.shields.io/npm/v/nswag.svg)](https://www.npmjs.com/package/nswag)
 [![Build status](https://img.shields.io/appveyor/ci/rsuter/nswag.svg?label=build)](https://ci.appveyor.com/project/rsuter/nswag)
 [![Build status](https://img.shields.io/appveyor/ci/rsuter/nswag-25x6o.svg?label=CI+build)](https://ci.appveyor.com/project/rsuter/nswag-25x6o)
+[![MyGet CI](https://img.shields.io/myget/nswag-ci/vpre/NSwag.Core.svg?label=CI+nuget)](https://www.myget.org/gallery/nswag-ci)
 [![Gitter](https://img.shields.io/badge/gitter-join%20chat-1dce73.svg)](https://gitter.im/NSwag/NSwag)
 [![StackOverflow](https://img.shields.io/badge/questions-on%20StackOverflow-orange.svg?style=flat)](http://stackoverflow.com/questions/tagged/nswag)
 
@@ -27,6 +30,7 @@ The project is developed and maintained by [Rico Suter](http://rsuter.com) and o
 
 **Tutorials**
 
+- [Video Tutorial: How to integrate NSwag into your ASP.NET Core Web API project (5 mins)](https://www.youtube.com/watch?v=lF9ZZ8p2Ciw)
 - [Integrate the NSwag toolchain into your ASP.NET Web API project](https://blog.rsuter.com/nswag-tutorial-integrate-the-nswag-toolchain-into-your-asp-net-web-api-project/)
 - [Generate an Angular 2 TypeScript client from an existing ASP.NET Web API web assembly](https://blog.rsuter.com/nswag-tutorial-generate-an-angular-2-typescript-client-from-an-existing-asp-net-web-api-web-assembly/)
 
@@ -65,7 +69,7 @@ The project is developed and maintained by [Rico Suter](http://rsuter.com) and o
 
 - [Download latest **NSwagStudio MSI installer**](http://rsuter.com/Projects/NSwagStudio/installer.php) (Windows Desktop application)
 - [Download latest **NSwag command line tools** and NSwagStudio as ZIP archive](http://rsuter.com/Projects/NSwagStudio/archive.php)
-- [Download latest **Build Artifacts** from AppVeyor](https://ci.appveyor.com/project/rsuter/nswag/build/artifacts) (command line tools and NSwagStudio binaries)
+- [Download latest **CI Build Artifacts** from AppVeyor](https://ci.appveyor.com/project/rsuter/nswag/build/artifacts) (command line tools and NSwagStudio binaries)
 
 **NPM Packages**
 

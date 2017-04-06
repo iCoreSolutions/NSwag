@@ -29,6 +29,7 @@ namespace NSwag.CodeGeneration.CSharp.Models
         private readonly SwaggerToCSharpGeneratorSettings _settings;
         private readonly SwaggerOperation _operation;
         private readonly SwaggerToCSharpGeneratorBase _generator;
+        private readonly SwaggerToCSharpTypeResolver _resolver;
 
         /// <summary>Initializes a new instance of the <see cref="CSharpOperationModel" /> class.</summary>
         /// <param name="operation">The operation.</param>
@@ -45,6 +46,7 @@ namespace NSwag.CodeGeneration.CSharp.Models
             _settings = settings;
             _operation = operation;
             _generator = generator;
+            _resolver = resolver;
 
             var parameters = _operation.ActualParameters.ToList();
             if (settings.GenerateOptionalParameters)
@@ -65,15 +67,22 @@ namespace NSwag.CodeGeneration.CSharp.Models
             {
                 var controllerName = _settings.GenerateControllerName(ControllerName);
                 var settings = _settings as SwaggerToCSharpClientGeneratorSettings;
-                if (settings != null && settings.ProtectedMethods?.Contains(controllerName + "." + OperationNameUpper + "Async") == true)
+                if (settings != null && settings.ProtectedMethods?.Contains(controllerName + "." + ConversionUtilities.ConvertToUpperCamelCase(OperationName, false) + "Async") == true)
                     return "protected";
 
                 return "public";
             }
         }
 
+        /// <summary>Gets the actual name of the operation (language specific).</summary>
+        public override string ActualOperationName => ConversionUtilities.ConvertToUpperCamelCase(OperationName, false)
+            + (MethodAccessModifier == "protected" ? "Core" : string.Empty);
+
         /// <summary>Gets a value indicating whether this operation is rendered as interface method.</summary>
         public bool IsInterfaceMethod => MethodAccessModifier == "public";
+
+        /// <summary>Gets a value indicating whether the operation has a result type.</summary>
+        public bool HasResult => UnwrappedResultType != "void";
 
         /// <summary>Gets or sets the type of the result.</summary>
         public override string ResultType
@@ -104,6 +113,42 @@ namespace NSwag.CodeGeneration.CSharp.Models
 
                 var response = _operation.Responses.Single(r => !HttpUtilities.IsSuccessStatusCode(r.Key)).Value;
                 return _generator.GetTypeName(response.ActualResponseSchema, response.IsNullable(_settings.CodeGeneratorSettings.NullHandling), "Exception");
+            }
+        }
+
+        /// <summary>Gets or sets the exception descriptions.</summary>
+        public IEnumerable<CSharpExceptionDescriptionModel> ExceptionDescriptions
+        {
+            get
+            {
+                var settings = (SwaggerToCSharpClientGeneratorSettings)_settings;
+                var controllerName = _settings.GenerateControllerName(ControllerName);
+                return Responses
+                    .Where(r => r.ThrowsException(this))
+                    .SelectMany(r =>
+                    {
+                        if (r.ExpectedSchemas?.Any() == true)
+                        {
+                            return r.ExpectedSchemas
+                                .Where(s => s.Schema.ActualSchema.InheritsSchema(_resolver.ExceptionSchema))
+                                .Select(s =>
+                                {
+                                    var schema = s.Schema;
+                                    var isNullable = schema.IsNullable(_settings.CSharpGeneratorSettings.NullHandling);
+                                    var typeName = _generator.GetTypeName(schema.ActualSchema, isNullable, "Response");
+                                    return new CSharpExceptionDescriptionModel(typeName, s.Description, controllerName, settings);
+                                });
+                        }
+                        else if (r.InheritsExceptionSchema)
+                        {
+                            return new[]
+                            {
+                                new CSharpExceptionDescriptionModel(r.Type, r.ExceptionDescription, controllerName, settings)
+                            };
+                        }
+                        else
+                            return new CSharpExceptionDescriptionModel[] { };
+                    });
             }
         }
 

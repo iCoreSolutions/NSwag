@@ -16,11 +16,15 @@ using MyToolkit.Storage;
 using Newtonsoft.Json;
 using NJsonSchema;
 using NSwag;
-using NSwag.CodeGeneration;
 using NSwag.Commands;
 
 namespace NSwagStudio.ViewModels
 {
+    using System.Windows;
+    using System.Windows.Input;
+
+    using MessageBox = System.Windows.Forms.MessageBox;
+
     /// <summary>The view model for the MainWindow.</summary>
     public class MainWindowModel : ViewModelBase
     {
@@ -123,7 +127,7 @@ namespace NSwagStudio.ViewModels
         {
             var dlg = new OpenFileDialog();
             dlg.Title = "Open NSwag settings file";
-            dlg.Filter = "NSwag file (*.nswag)|*.nswag|NSwag JSON file (*.json)|*.json";
+            dlg.Filter = "NSwag file (*.nswag;nswag.json)|*.nswag;nswag.json";
             dlg.RestoreDirectory = true;
             if (dlg.ShowDialog() == DialogResult.OK)
                 await OpenDocumentAsync(dlg.FileName);
@@ -172,6 +176,7 @@ namespace NSwagStudio.ViewModels
             {
                 if (File.Exists(document.Document.Path))
                 {
+                    FocusManager.SetFocusedElement(Application.Current.MainWindow, null);
                     await document.Document.SaveAsync();
                     MessageBox.Show("The file has been saved.", "File saved");
                     return true;
@@ -189,12 +194,13 @@ namespace NSwagStudio.ViewModels
         private async Task<bool> SaveAsDocumentAsync(DocumentModel document)
         {
             var dlg = new SaveFileDialog();
-            dlg.Filter = "NSwag file (*.nswag)|*.nswag|NSwag JSON file (*.json)|*.json";
+            dlg.Filter = "NSwag file (*.nswag;nswag.json)|*.nswag;nswag.json";
             dlg.RestoreDirectory = true;
             dlg.AddExtension = true;
             if (dlg.ShowDialog() == DialogResult.OK)
             {
                 document.Document.Path = dlg.FileName;
+                FocusManager.SetFocusedElement(Application.Current.MainWindow, null);
                 await document.Document.SaveAsync();
                 return true;
             }

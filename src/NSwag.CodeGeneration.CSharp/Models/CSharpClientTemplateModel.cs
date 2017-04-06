@@ -76,6 +76,9 @@ namespace NSwag.CodeGeneration.CSharp.Models
         /// <summary>Gets a value indicating whether to use a HTTP client creation method.</summary>
         public bool UseHttpClientCreationMethod => _settings.UseHttpClientCreationMethod;
 
+        /// <summary>Gets the type of the HttpClient that will be used in the calls from a client to a service.</summary>
+        public string HttpClientType => _settings.HttpClientType;
+
         /// <summary>Gets a value indicating whether to use a HTTP request message creation method.</summary>
         public bool UseHttpRequestMessageCreationMethod => _settings.UseHttpRequestMessageCreationMethod;
 
@@ -97,18 +100,34 @@ namespace NSwag.CodeGeneration.CSharp.Models
         /// <summary>Gets or sets a value indicating whether to use and expose the base URL (default: true).</summary>
         public bool UseBaseUrl => _settings.UseBaseUrl;
 
+        /// <summary>Gets or sets a value indicating whether to generate synchronous methods (not recommended, default: false).</summary>
+        public bool GenerateSyncMethods => _settings.GenerateSyncMethods;
+
         /// <summary>Gets or sets the client class access modifier.</summary>
         public string ClientClassAccessModifier => _settings.ClientClassAccessModifier;
 
         /// <summary>Gets the operations.</summary>
         public IEnumerable<CSharpOperationModel> Operations { get; }
 
-        /// <summary>Gets the JSON converters code.</summary>
-        public string JsonConverters => CSharpJsonConverters.GenerateConverters(
-            (_settings.CSharpGeneratorSettings.JsonConverters ?? new string[] { })
-            .Concat(RequiresJsonExceptionConverter ? new[] { "JsonExceptionConverter" } : new string[] { }));
+        /// <summary>Gets or sets a value indicating whether DTO exceptions are wrapped in a SwaggerException instance.</summary>
+        public bool WrapDtoExceptions => _settings.WrapDtoExceptions;
 
+        /// <summary>Gets the JSON serializer parameter code.</summary>
+        public string JsonSerializerParameterCode
+        {
+            get
+            {
+                var handleReferences = _settings.CSharpGeneratorSettings.HandleReferences;
+
+                IEnumerable<string> jsonConverters = _settings.CSharpGeneratorSettings.JsonConverters ?? new string[] { };
+                if (RequiresJsonExceptionConverter)
+                    jsonConverters = jsonConverters.Concat(new[] { "JsonExceptionConverter" });
+
+                return CSharpJsonSerializerGenerator.GenerateJsonSerializerParameterCode(handleReferences, jsonConverters.ToList());
+            }
+        }
+        
         private bool RequiresJsonExceptionConverter =>
-            _document.Operations.Any(o => o.Operation.AllResponses.Any(r => r.Value.InheritsExceptionSchema(_exceptionSchema)));
+            _document.Operations.Any(o => o.Operation.AllResponses.Any(r => r.Value.ActualResponseSchema.InheritsSchema(_exceptionSchema)));
     }
 }

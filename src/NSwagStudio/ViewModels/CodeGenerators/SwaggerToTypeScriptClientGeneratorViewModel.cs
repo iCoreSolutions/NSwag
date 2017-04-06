@@ -33,7 +33,7 @@ namespace NSwagStudio.ViewModels.CodeGenerators
         }
 
         /// <summary>Gets the supported TypeScript versions.</summary>
-        public decimal[] TypeScriptVersions => new[] {1.8m, 2.0m};
+        public decimal[] TypeScriptVersions => new[] { 1.8m, 2.0m };
 
         /// <summary>Gets the output templates. </summary>
         public TypeScriptTemplate[] Templates
@@ -91,7 +91,7 @@ namespace NSwagStudio.ViewModels.CodeGenerators
         {
             get
             {
-                return Command.ExcludedTypeNames != null ? string.Join(",", Command.ExcludedTypeNames) : "";
+                return Command?.ExcludedTypeNames != null ? string.Join(",", Command.ExcludedTypeNames) : "";
             }
             set
             {
@@ -103,9 +103,20 @@ namespace NSwagStudio.ViewModels.CodeGenerators
             }
         }
 
+        /// <summary>Gets or sets the list of methods with a protected access modifier ("classname.methodname").</summary>
+        public string ProtectedMethods
+        {
+            get { return _command?.ProtectedMethods != null ? string.Join(",", _command.ProtectedMethods) : ""; }
+            set
+            {
+                _command.ProtectedMethods = !string.IsNullOrEmpty(value) ? value.Split(',') : new string[] { };
+                RaisePropertyChanged();
+            }
+        }
+
         public string ClassTypes
         {
-            get { return _command.ClassTypes != null ? string.Join(",", _command.ClassTypes) : ""; }
+            get { return _command?.ClassTypes != null ? string.Join(",", _command.ClassTypes) : ""; }
             set
             {
                 _command.ClassTypes = !string.IsNullOrEmpty(value) ? value.Split(',') : new string[] { };
@@ -115,7 +126,7 @@ namespace NSwagStudio.ViewModels.CodeGenerators
 
         public string ExtendedClasses
         {
-            get { return _command.ExtendedClasses != null ? string.Join(",", _command.ExtendedClasses) : ""; }
+            get { return _command?.ExtendedClasses != null ? string.Join(",", _command.ExtendedClasses) : ""; }
             set
             {
                 _command.ExtendedClasses = !string.IsNullOrEmpty(value) ? value.Split(',') : new string[] { };

@@ -49,7 +49,7 @@ namespace NSwag.Commands
         }
 
         [Argument(Name = "GenerateOptionalParameters", IsRequired = false,
-                  Description = "Specifies whether to reorder parameters (required first, optional at the end) and generate optional C# parameters (default: false).")]
+                  Description = "Specifies whether to reorder parameters (required first, optional at the end) and generate optional parameters (default: false).")]
         public bool GenerateOptionalParameters
         {
             get { return Settings.GenerateOptionalParameters; }
@@ -127,6 +127,13 @@ namespace NSwag.Commands
             set { Settings.CSharpGeneratorSettings.GenerateDefaultValues = value; }
         }
 
+        [Argument(Name = "GenerateDataAnnotations", IsRequired = false, Description = "Specifies whether to generate data annotation attributes on DTO classes (default: true).")]
+        public bool GenerateDataAnnotations
+        {
+            get { return Settings.CSharpGeneratorSettings.GenerateDataAnnotations; }
+            set { Settings.CSharpGeneratorSettings.GenerateDataAnnotations = value; }
+        }
+
         [Argument(Name = "ExcludedTypeNames", IsRequired = false, Description = "The excluded DTO type names (must be defined in an import or other namespace).")]
         public string[] ExcludedTypeNames
         {
@@ -153,6 +160,29 @@ namespace NSwag.Commands
         {
             get { return Settings.ResponseClass; }
             set { Settings.ResponseClass = value; }
+        }
+
+        [Argument(Name = "HandleReferences", IsRequired = false, Description = "Use preserve references handling (All) in the JSON serializer (default: false).")]
+        public bool HandleReferences
+        {
+            get { return Settings.CSharpGeneratorSettings.HandleReferences; }
+            set { Settings.CSharpGeneratorSettings.HandleReferences = value; }
+        }
+
+        [Argument(Name = "GenerateImmutableArrayProperties", IsRequired = false,
+                  Description = "Specifies whether to remove the setter for non-nullable array properties (default: false).")]
+        public bool GenerateImmutableArrayProperties
+        {
+            get { return Settings.CSharpGeneratorSettings.GenerateImmutableArrayProperties; }
+            set { Settings.CSharpGeneratorSettings.GenerateImmutableArrayProperties = value; }
+        }
+
+        [Argument(Name = "GenerateImmutableDictionaryProperties", IsRequired = false,
+                  Description = "Specifies whether to remove the setter for non-nullable dictionary properties (default: false).")]
+        public bool GenerateImmutableDictionaryProperties
+        {
+            get { return Settings.CSharpGeneratorSettings.GenerateImmutableDictionaryProperties; }
+            set { Settings.CSharpGeneratorSettings.GenerateImmutableDictionaryProperties = value; }
         }
     }
 }

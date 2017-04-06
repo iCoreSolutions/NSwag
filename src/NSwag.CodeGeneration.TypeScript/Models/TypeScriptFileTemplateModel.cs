@@ -48,11 +48,35 @@ namespace NSwag.CodeGeneration.TypeScript.Models
             ExtensionCodeBottom = GenerateExtensionCodeAfter();
         }
 
+        /// <summary>Gets a value indicating whether to generate client classes.</summary>
+        public bool GenerateClientClasses => _settings.GenerateClientClasses;
+
         /// <summary>Gets a value indicating whether the generated code is for Angular 2.</summary>
-        public bool IsAngular2 => _settings.GenerateClientClasses && _settings.Template == TypeScriptTemplate.Angular2;
+        public bool IsAngular => _settings.Template == TypeScriptTemplate.Angular;
 
         /// <summary>Gets a value indicating whether the generated code is for Aurelia.</summary>
-        public bool IsAurelia => _settings.GenerateClientClasses && _settings.Template == TypeScriptTemplate.Aurelia;
+        public bool IsAurelia => _settings.Template == TypeScriptTemplate.Aurelia;
+
+        /// <summary>Gets a value indicating whether the generated code is for Angular.</summary>
+        public bool IsAngularJS => _settings.Template == TypeScriptTemplate.AngularJS;
+
+        /// <summary>Gets a value indicating whether the generated code is for Knockout.</summary>
+        public bool IsKnockout => _settings.TypeScriptGeneratorSettings.TypeStyle == TypeScriptTypeStyle.KnockoutClass;
+
+        /// <summary>Gets a value indicating whether to render for JQuery.</summary>
+        public bool IsJQuery => _settings.Template == TypeScriptTemplate.JQueryCallbacks || _settings.Template == TypeScriptTemplate.JQueryPromises;
+
+        /// <summary>Gets or sets a value indicating whether DTO exceptions are wrapped in a SwaggerException instance.</summary>
+        public bool WrapDtoExceptions => _settings.WrapDtoExceptions;
+
+        /// <summary>Gets a value indicating whether MomentJS is required.</summary>
+        public bool RequiresMomentJS => _settings.TypeScriptGeneratorSettings.DateTimeType == TypeScriptDateTimeType.MomentJS;
+
+        /// <summary>Gets a value indicating whether required types should be imported.</summary>
+        public bool ImportRequiredTypes => _settings.ImportRequiredTypes;
+
+        /// <summary>Gets a value indicating whether to call 'transformOptions' on the base class or extension class.</summary>
+        public bool UseTransformOptionsMethod => _settings.UseTransformOptionsMethod;
 
         /// <summary>Gets the clients code.</summary>
         public string Clients => _settings.GenerateClientClasses ? _clientCode : string.Empty;
@@ -96,6 +120,15 @@ namespace NSwag.CodeGeneration.TypeScript.Models
 
         /// <summary>Table containing list of the generated classes.</summary>
         public string[] ClientClasses { get; }
+
+        /// <summary>Gets or sets the token name for injecting the API base URL string (used in the Angular2 template).</summary>
+        public string BaseUrlTokenName => _settings.BaseUrlTokenName;
+
+        /// <summary>Gets a value indicating whether to handle references.</summary>
+        public bool HandleReferences => _settings.TypeScriptGeneratorSettings.HandleReferences;
+
+        /// <summary>Gets the reference handling code.</summary>
+        public string ReferenceHandlingCode => TypeScriptReferenceHandlingCodeGenerator.Generate();
 
         private string GenerateDtoTypes()
         {

@@ -87,11 +87,25 @@ namespace NSwag.Commands
             set { Settings.ExceptionClass = value; }
         }
 
+        [Argument(Name = "WrapDtoExceptions", IsRequired = false, Description = "Specifies whether DTO exceptions are wrapped in a SwaggerException instance (default: true).")]
+        public bool WrapDtoExceptions
+        {
+            get { return Settings.WrapDtoExceptions; }
+            set { Settings.WrapDtoExceptions = value; }
+        }
+
         [Argument(Name = "UseHttpClientCreationMethod", IsRequired = false, Description = "Specifies whether to call CreateHttpClientAsync on the base class to create a new HttpClient.")]
         public bool UseHttpClientCreationMethod
         {
             get { return Settings.UseHttpClientCreationMethod; }
             set { Settings.UseHttpClientCreationMethod = value; }
+        }
+
+        [Argument(Name = "HttpClientType", IsRequired = false, Description = "Specifies the HttpClient type. By default the 'System.Net.Http.HttpClient' is used.")]
+        public string HttpClientType
+        {
+            get { return Settings.HttpClientType; }
+            set { Settings.HttpClientType = value; }
         }
 
         [Argument(Name = "UseHttpRequestMessageCreationMethod", IsRequired = false,
@@ -108,6 +122,14 @@ namespace NSwag.Commands
         {
             get { return Settings.UseBaseUrl; }
             set { Settings.UseBaseUrl = value; }
+        }
+
+        [Argument(Name = "GenerateSyncMethods", IsRequired = false,
+                  Description = "Specifies whether to generate synchronous methods (not recommended, default: false).")]
+        public bool GenerateSyncMethods
+        {
+            get { return Settings.GenerateSyncMethods; }
+            set { Settings.GenerateSyncMethods = value; }
         }
 
         [Argument(Name = "JsonConverters", IsRequired = false, Description = "Specifies the custom Json.NET converter types (optional, comma separated).")]

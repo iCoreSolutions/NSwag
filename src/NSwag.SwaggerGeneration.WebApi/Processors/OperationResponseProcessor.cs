@@ -7,6 +7,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
@@ -15,6 +16,7 @@ using NJsonSchema.Generation;
 using NJsonSchema.Infrastructure;
 using NSwag.SwaggerGeneration.Processors;
 using NSwag.SwaggerGeneration.Processors.Contexts;
+using NSwag.SwaggerGeneration.WebApi.Processors.Models;
 
 namespace NSwag.SwaggerGeneration.WebApi.Processors
 {
@@ -50,6 +52,7 @@ namespace NSwag.SwaggerGeneration.WebApi.Processors
 
             if (responseTypeAttributes.Any() || producesResponseTypeAttributes.Any())
             {
+                var responses = new List<OperationResponseModel>();
                 foreach (var attribute in responseTypeAttributes)
                 {
                     dynamic responseTypeAttribute = attribute;
@@ -77,6 +80,23 @@ namespace NSwag.SwaggerGeneration.WebApi.Processors
                             description = responseTypeAttribute.Description;
                     }
 
+                    responses.Add(new OperationResponseModel(httpStatusCode, returnType, description));
+                }
+
+                foreach (dynamic producesResponseTypeAttribute in producesResponseTypeAttributes)
+                {
+                    var returnType = producesResponseTypeAttribute.Type;
+                    var httpStatusCode = producesResponseTypeAttribute.StatusCode.ToString(CultureInfo.InvariantCulture);
+                    var description = HttpUtilities.IsSuccessStatusCode(httpStatusCode) ? successXmlDescription : string.Empty;
+                    responses.Add(new OperationResponseModel(httpStatusCode, returnType, description));
+                }
+
+                foreach (var group in responses.GroupBy(r => r.HttpStatusCode))
+                {
+                    var httpStatusCode = group.Key;
+                    var returnType = group.Select(r => r.ResponseType).FindCommonBaseType();
+                    var description = string.Join("\nor\n", group.Select(r => r.Description));
+
                     var typeDescription = JsonObjectTypeDescription.FromType(returnType, context.MethodInfo.ReturnParameter?.GetCustomAttributes(), _settings.DefaultEnumHandling);
                     var response = new SwaggerResponse
                     {
@@ -87,26 +107,7 @@ namespace NSwag.SwaggerGeneration.WebApi.Processors
                     {
                         response.IsNullableRaw = typeDescription.IsNullable;
                         response.Schema = await context.SwaggerGenerator.GenerateAndAppendSchemaFromTypeAsync(returnType, typeDescription.IsNullable, null).ConfigureAwait(false);
-                    }
-
-                    context.OperationDescription.Operation.Responses[httpStatusCode] = response;
-                }
-
-                foreach (dynamic producesResponseTypeAttribute in producesResponseTypeAttributes)
-                {
-                    var returnType = producesResponseTypeAttribute.Type;
-                    var typeDescription = JsonObjectTypeDescription.FromType(returnType, context.MethodInfo.ReturnParameter?.GetCustomAttributes(), _settings.DefaultEnumHandling);
-
-                    var httpStatusCode = producesResponseTypeAttribute.StatusCode.ToString(CultureInfo.InvariantCulture);
-                    var response = new SwaggerResponse
-                    {
-                        Description = HttpUtilities.IsSuccessStatusCode(httpStatusCode) ? successXmlDescription : string.Empty
-                    };
-
-                    if (IsVoidResponse(returnType) == false)
-                    {
-                        response.IsNullableRaw = typeDescription.IsNullable;
-                        response.Schema = await context.SwaggerGenerator.GenerateAndAppendSchemaFromTypeAsync(returnType, typeDescription.IsNullable, null).ConfigureAwait(false);
+                        response.ExpectedSchemas = await GenerateExpectedSchemasAsync(context, group);
                     }
 
                     context.OperationDescription.Operation.Responses[httpStatusCode] = response;
@@ -117,7 +118,28 @@ namespace NSwag.SwaggerGeneration.WebApi.Processors
 
             return true;
         }
-        
+
+        private async Task<ICollection<JsonExpectedSchema>> GenerateExpectedSchemasAsync(OperationProcessorContext context, IGrouping<string, OperationResponseModel> group)
+        {
+            if (group.Count() > 1)
+            {
+                var expectedSchemas = new List<JsonExpectedSchema>();
+                foreach (var response in group)
+                {
+                    var isNullable = JsonObjectTypeDescription.FromType(response.ResponseType, null, _settings.DefaultEnumHandling).IsNullable;
+                    var schema = await context.SwaggerGenerator.GenerateAndAppendSchemaFromTypeAsync(response.ResponseType, isNullable, null).ConfigureAwait(false);
+                    expectedSchemas.Add(new JsonExpectedSchema
+                    {
+                        Schema = schema,
+                        Description = response.Description
+                    });
+                }
+
+                return expectedSchemas;
+            }
+            return null;
+        }
+
         private async Task LoadDefaultSuccessResponseAsync(SwaggerOperation operation, MethodInfo methodInfo, string responseDescription, SwaggerGenerator swaggerGenerator)
         {
             var returnType = methodInfo.ReturnType;
@@ -135,9 +157,17 @@ namespace NSwag.SwaggerGeneration.WebApi.Processors
             }
             else
             {
-                var typeDescription = JsonObjectTypeDescription.FromType(returnType, 
-                    methodInfo.ReturnParameter?.GetCustomAttributes(), _settings.DefaultEnumHandling);
+                IEnumerable<Attribute> attributes;
+                try
+                {
+                    attributes = methodInfo.ReturnParameter?.GetCustomAttributes(true);
+                }
+                catch
+                {
+                    attributes = methodInfo.ReturnParameter?.GetCustomAttributes(false);
+                }
 
+                var typeDescription = JsonObjectTypeDescription.FromType(returnType, attributes, _settings.DefaultEnumHandling);
                 operation.Responses["200"] = new SwaggerResponse
                 {
                     Description = responseDescription,

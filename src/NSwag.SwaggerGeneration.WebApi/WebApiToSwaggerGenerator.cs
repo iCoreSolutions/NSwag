@@ -14,6 +14,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using NJsonSchema.Infrastructure;
 using NSwag.SwaggerGeneration.Processors.Contexts;
+using NSwag.SwaggerGeneration.WebApi.Infrastructure;
 
 namespace NSwag.SwaggerGeneration.WebApi
 {
@@ -88,7 +89,7 @@ namespace NSwag.SwaggerGeneration.WebApi
             document.GenerateOperationIds();
 
             foreach (var processor in Settings.DocumentProcessors)
-                processor.Process(new DocumentProcessorContext(document, controllerTypes, schemaResolver, _schemaGenerator));
+                await processor.ProcessAsync(new DocumentProcessorContext(document, controllerTypes, schemaResolver, _schemaGenerator));
 
             return document;
         }
@@ -144,11 +145,11 @@ namespace NSwag.SwaggerGeneration.WebApi
                     }
                 }
 
-                await AddOperationDescriptionsToDocumentAsync(document, operations, swaggerGenerator).ConfigureAwait(false);
+                await AddOperationDescriptionsToDocumentAsync(document, controllerType, operations, swaggerGenerator).ConfigureAwait(false);
             }
         }
 
-        private async Task AddOperationDescriptionsToDocumentAsync(SwaggerDocument document, List<Tuple<SwaggerOperationDescription, MethodInfo>> operations, SwaggerGenerator swaggerGenerator)
+        private async Task AddOperationDescriptionsToDocumentAsync(SwaggerDocument document, Type controllerType, List<Tuple<SwaggerOperationDescription, MethodInfo>> operations, SwaggerGenerator swaggerGenerator)
         {
             var allOperation = operations.Select(t => t.Item1).ToList();
             foreach (var tuple in operations)
@@ -156,7 +157,7 @@ namespace NSwag.SwaggerGeneration.WebApi
                 var operation = tuple.Item1;
                 var method = tuple.Item2;
 
-                var addOperation = await RunOperationProcessorsAsync(document, method, operation, allOperation, swaggerGenerator).ConfigureAwait(false);
+                var addOperation = await RunOperationProcessorsAsync(document, controllerType, method, operation, allOperation, swaggerGenerator).ConfigureAwait(false);
                 if (addOperation)
                 {
                     if (!document.Paths.ContainsKey(operation.Path))
@@ -170,13 +171,13 @@ namespace NSwag.SwaggerGeneration.WebApi
             }
         }
 
-        private async Task<bool> RunOperationProcessorsAsync(SwaggerDocument document, MethodInfo methodInfo,
+        private async Task<bool> RunOperationProcessorsAsync(SwaggerDocument document, Type controllerType, MethodInfo methodInfo,
             SwaggerOperationDescription operationDescription, List<SwaggerOperationDescription> allOperations, SwaggerGenerator swaggerGenerator)
         {
             // 1. Run from settings
             foreach (var operationProcessor in Settings.OperationProcessors)
             {
-                if (await operationProcessor.ProcessAsync(new OperationProcessorContext(document, operationDescription, methodInfo, swaggerGenerator, allOperations)).ConfigureAwait(false) == false)
+                if (await operationProcessor.ProcessAsync(new OperationProcessorContext(document, operationDescription, controllerType, methodInfo, swaggerGenerator, allOperations)).ConfigureAwait(false) == false)
                     return false;
             }
 
@@ -196,7 +197,7 @@ namespace NSwag.SwaggerGeneration.WebApi
 
             return true;
         }
-        
+
         private static IEnumerable<MethodInfo> GetActionMethods(Type controllerType)
         {
             var methods = controllerType.GetRuntimeMethods().Where(m => m.IsPublic);
@@ -204,10 +205,16 @@ namespace NSwag.SwaggerGeneration.WebApi
                 m.IsSpecialName == false && // avoid property methods
                 m.DeclaringType != null &&
                 m.DeclaringType != typeof(object) &&
-                m.GetCustomAttributes().All(a => a.GetType().Name != "SwaggerIgnoreAttribute") &&
+                m.GetCustomAttributes().All(a => a.GetType().Name != "SwaggerIgnoreAttribute" && a.GetType().Name != "NonActionAttribute") &&
                 m.DeclaringType.FullName.StartsWith("Microsoft.AspNet") == false && // .NET Core (Web API & MVC)
                 m.DeclaringType.FullName != "System.Web.Http.ApiController" &&
-                m.DeclaringType.FullName != "System.Web.Mvc.Controller");
+                m.DeclaringType.FullName != "System.Web.Mvc.Controller")
+                .Where(m =>
+                {
+                    return m.GetCustomAttributes()
+                        .SingleOrDefault(a => a.GetType().Name == "ApiExplorerSettingsAttribute")?
+                        .TryGetPropertyValue("IgnoreApi", false) != true;
+                });
         }
 
         private string GetOperationId(SwaggerDocument document, string controllerName, MethodInfo method)
@@ -261,15 +268,10 @@ namespace NSwag.SwaggerGeneration.WebApi
                         httpPaths.Add(attribute.Template);
                 }
             }
-            // TODO: Check if this is correct
-            else if (routePrefixAttribute != null && (
-                (method.GetParameters().Length == 0 && method.Name == "Get") ||
-                method.Name == "Post" ||
-                method.Name == "Put" ||
-                method.Name == "Delete"))
-            {
+            else if (routePrefixAttribute != null && routeAttributeOnClass != null)
+                httpPaths.Add(routePrefixAttribute.Prefix + "/" + routeAttributeOnClass.Template);
+            else if (routePrefixAttribute != null)
                 httpPaths.Add(routePrefixAttribute.Prefix);
-            }
             else if (routeAttributeOnClass != null)
                 httpPaths.Add(routeAttributeOnClass.Template);
             else
@@ -277,6 +279,7 @@ namespace NSwag.SwaggerGeneration.WebApi
 
             var actionName = GetActionName(method);
             return httpPaths
+                .SelectMany(p => ExpandOptionalHttpPathParameters(p, method))
                 .Select(p =>
                     "/" + p
                         .Replace("[", "{")
@@ -284,32 +287,34 @@ namespace NSwag.SwaggerGeneration.WebApi
                         .Replace("{controller}", controllerName)
                         .Replace("{action}", actionName)
                         .Trim('/'))
-                .SelectMany(p => ExpandOptionalHttpPathParameters(p, method))
                 .Distinct()
                 .ToList();
         }
-
+        
         private IEnumerable<string> ExpandOptionalHttpPathParameters(string path, MethodInfo method)
         {
-            var segments = path.Split('/');
+            var segments = path.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
             for (int i = 0; i < segments.Length; i++)
             {
                 var segment = segments[i];
                 if (segment.EndsWith("?}"))
                 {
-                    foreach (var p in ExpandOptionalHttpPathParameters(string.Join("/", segments.Take(i).Concat(segments.Skip(i + 1))), method))
-                        yield return p;
-
                     // Only expand if optional parameter is available in action method
                     if (method.GetParameters().Any(p => segment.StartsWith("{" + p.Name + ":") || segment.StartsWith("{" + p.Name + "?")))
                     {
                         foreach (var p in ExpandOptionalHttpPathParameters(string.Join("/", segments.Take(i).Concat(new[] { segment.Replace("?", "") }).Concat(segments.Skip(i + 1))), method))
                             yield return p;
                     }
+                    else
+                    {
+                        foreach (var p in ExpandOptionalHttpPathParameters(string.Join("/", segments.Take(i).Concat(segments.Skip(i + 1))), method))
+                            yield return p;
+                    }
 
                     yield break;
                 }
             }
+
             yield return path;
         }
 
@@ -351,14 +356,20 @@ namespace NSwag.SwaggerGeneration.WebApi
 
             if (httpMethods.Length == 0)
             {
-                if (actionName.StartsWith("Get"))
+                if (actionName.StartsWith("Get", StringComparison.OrdinalIgnoreCase))
                     yield return SwaggerOperationMethod.Get;
-                else if (actionName.StartsWith("Post"))
+                else if (actionName.StartsWith("Post", StringComparison.OrdinalIgnoreCase))
                     yield return SwaggerOperationMethod.Post;
-                else if (actionName.StartsWith("Put"))
+                else if (actionName.StartsWith("Put", StringComparison.OrdinalIgnoreCase))
                     yield return SwaggerOperationMethod.Put;
-                else if (actionName.StartsWith("Delete"))
+                else if (actionName.StartsWith("Delete", StringComparison.OrdinalIgnoreCase))
                     yield return SwaggerOperationMethod.Delete;
+                else if (actionName.StartsWith("Patch", StringComparison.OrdinalIgnoreCase))
+                    yield return SwaggerOperationMethod.Patch;
+                else if (actionName.StartsWith("Options", StringComparison.OrdinalIgnoreCase))
+                    yield return SwaggerOperationMethod.Options;
+                else if (actionName.StartsWith("Head", StringComparison.OrdinalIgnoreCase))
+                    yield return SwaggerOperationMethod.Head;
                 else
                     yield return SwaggerOperationMethod.Post;
             }

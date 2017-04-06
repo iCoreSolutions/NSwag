@@ -1,0 +1,108 @@
+﻿<#@ template visibility="internal" #>
+<#@ import namespace="NJsonSchema" #>
+<#@ import namespace="CodeGeneration.TypeScript" #>
+
+<#if(Model.HasOperations){#>
+<#if(Model.GenerateClientInterfaces){#>
+export interface I<#=Model.Class#> {
+<#foreach(var operation in Model.Operations){#>
+<#if(operation.HasDocumentation){#>    /**
+<#if(operation.HasSummary){#>     * <#=operation.Summary#>
+<#}#><#foreach(var parameter in operation.Parameters){#>
+<#if(parameter.HasDescription){#>     * @<#=parameter.VariableName#> <#=parameter.Description ?? ""#>
+<#}#><#}#><#if(operation.HasResultDescription){#>     * @return <#=operation.ResultDescription#>
+<#}#><#if(operation.IsDeprecated){#>     * @deprecated
+<#}#>     */
+<#}#>    <#=operation.MethodAccessModifier#><#=operation.ActualOperationName#>(<#foreach(var parameter in operation.Parameters){#><#=parameter.VariableName#><#if(Model.GenerateOptionalParameters && parameter.IsOptional){#>?<#}#>: <#=parameter.Type#><#if(!parameter.IsLast){#>, <#}#><#}#>): Observable<<#=operation.ResultType#><#if(Model.SupportsStrictNullChecks){#> | null<#}#>>;
+<#}#>}
+<#}#>
+
+@Injectable()
+export class <#=Model.Class#> <#if(Model.HasClientBaseClass){#>extends <#=Model.ClientBaseClass#> <#}#><#if(Model.GenerateClientInterfaces){#>implements I<#=Model.Class#> <#}#>{
+    private http: Http;
+    private baseUrl: string;
+    protected jsonParseReviver: <#if(Model.SupportsStrictNullChecks){#>((key: string, value: any) => any) | undefined<#}else{#>(key: string, value: any) => any<#}#> = undefined;
+
+<#if(!Model.HasExtendedConstructor){#>
+    constructor(<#if(Model.HasConfigurationClass){#>@Inject(<#=Model.ConfigurationClass#>) configuration: <#=Model.ConfigurationClass#>, <#}#>@Inject(Http) http: Http, @Optional() @Inject(<#=Model.BaseUrlTokenName#>) baseUrl?: string) {
+<#if(Model.HasClientBaseClass){#>
+        super(<#if(Model.HasConfigurationClass){#>configuration<#}#>);
+<#}#>
+        this.http = http;
+        this.baseUrl = baseUrl ? baseUrl : "<#=Model.BaseUrl#>";
+    }
+<#}#>
+<#if(Model.HasExtensionCode){#>
+    <#=Model.ExtensionCode#>
+    
+<#}#>
+<#foreach(var operation in Model.Operations){#>
+
+<#if(operation.HasDocumentation){#>    /**
+<#if(operation.HasSummary){#>     * <#=operation.Summary#>
+<#}#><#foreach(var parameter in operation.Parameters){#>
+<#if(parameter.HasDescription){#>     * @<#=parameter.VariableName#> <#=parameter.Description ?? ""#>
+<#}#><#}#><#if(operation.HasResultDescription){#>     * @return <#=operation.ResultDescription#>
+<#}#><#if(operation.IsDeprecated){#>     * @deprecated
+<#}#>     */
+<#}#>
+    <#=operation.MethodAccessModifier#><#=operation.ActualOperationName#>(<#foreach(var parameter in operation.Parameters){#><#=parameter.VariableName#><#if(Model.GenerateOptionalParameters && parameter.IsOptional){#>?<#}#>: <#=parameter.Type#><#if(!parameter.IsLast){#>, <#}#><#}#>): Observable<<#=operation.ResultType#>> {
+        <#=TypeScriptTemplatePartGenerator.RenderRequestUrlCode(operation, 2)#>
+
+        <#=TypeScriptTemplatePartGenerator.RenderRequestBodyCode(operation, 2)#>
+        
+        let options_ = {
+            body: content_,
+            method: "<#=operation.HttpMethodLower#>",
+<#if(operation.IsFile){#>
+            responseType: ResponseContentType.Blob,
+<#}#>
+            headers: new Headers({
+<#foreach(var parameter in operation.HeaderParameters){#>
+                "<#=parameter.Name#>": <#=parameter.VariableName#>, 
+<#}#>
+<#if(!operation.HasFormParameters){#>
+                "Content-Type": "<#=operation.Consumes#>; charset=UTF-8", 
+<#}#>
+<#if(!operation.IsFile){#>
+                "Accept": "<#=operation.Produces#>; charset=UTF-8"
+<#}#>
+            })
+        };
+
+<#if(Model.UseTransformOptionsMethod){#>
+        return Observable.fromPromise(this.transformOptions(options_)).flatMap(transformedOptions_ => {
+            return this.http.request(url_, transformedOptions_);
+        }).flatMap((_response) => {
+<#}else{#>
+        return this.http.request(url_, options_).map((_response) => {
+<#}#>
+<#if(Model.UseTransformResultMethod){#>
+            return this.transformResult(url_, _response, (_response) => this.process<#=operation.ActualOperationNameUpper#>(_response));
+<#}else{#>
+            return this.process<#=operation.ActualOperationNameUpper#>(_response);
+<#}#>
+        }).catch((_response: any) => {
+            if (_response instanceof Response) {
+                try {
+<#if(Model.UseTransformResultMethod){#>
+                    return this.transformResult(url_, _response, (_response) => this.process<#=operation.ActualOperationNameUpper#>(_response));
+<#}else{#>
+                    return this.process<#=operation.ActualOperationNameUpper#>(_response);
+<#}#>
+                } catch (e) {
+                    return <Observable<<#=operation.ResultType#>>><any>Observable.throw(e);
+                }
+            } else
+                return <Observable<<#=operation.ResultType#>>><any>Observable.throw(_response);
+        });
+    }
+
+    protected process<#=operation.ActualOperationNameUpper#>(_response: Response): Observable<<#=operation.ResultType#><#if(Model.SupportsStrictNullChecks){#> | null<#}#>> {
+        const _status = _response.status; 
+
+        <#=TypeScriptTemplatePartGenerator.RenderProcessResponseCode(operation, 2)#>
+    }
+<#}#>
+}
+<#}#>
