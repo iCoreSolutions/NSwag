@@ -113,9 +113,9 @@ public partial interface I<#=Model.Class#>
     }
 
 <#}#>
-    partial void PrepareRequest(<#=Model.HttpClientType#> request, string url);
-    partial void PrepareRequest(<#=Model.HttpClientType#> request, System.Text.StringBuilder urlBuilder);
-    partial void ProcessResponse(<#=Model.HttpClientType#> request, System.Net.Http.HttpResponseMessage response);
+    partial void PrepareRequest(<#=Model.HttpClientType#> client, System.Net.Http.HttpRequestMessage request, string url);
+    partial void PrepareRequest(<#=Model.HttpClientType#> client, System.Net.Http.HttpRequestMessage request, System.Text.StringBuilder urlBuilder);
+    partial void ProcessResponse(<#=Model.HttpClientType#> client, System.Net.Http.HttpResponseMessage response);
 
 <#foreach(var operation in Model.Operations){#>
 <#  if(!Model.GenerateOptionalParameters){#>
@@ -246,12 +246,12 @@ urlBuilder_.Append("<#=parameter.Name#>=").Append(System.Uri.EscapeDataString(<#
             using (var request_ = new System.Net.Http.HttpRequestMessage())
 <#      }#>
             {
-                PrepareRequest(client_, urlBuilder_);
-                var url_ = urlBuilder_.ToString();
-                PrepareRequest(client_, url_);
-
 <#foreach(var parameter in operation.HeaderParameters){#>
+<#  if(parameter.IsStringArray){#>
+                request_.Headers.TryAddWithoutValidation("<#=parameter.Name#>", <#=parameter.VariableName#>);
+<#  }else{#>
                 request_.Headers.TryAddWithoutValidation("<#=parameter.Name#>", <#=parameter.VariableName#> != null ? <#=parameter.VariableName#>.ToString() : null);
+<#  }#>
 <#}#>
 <#if(operation.HasContent){#>
                 var content_ = new System.Net.Http.StringContent(<#if(operation.HasXmlBodyParameter){#><#=operation.ContentParameter.VariableName#><#}else{#>Newtonsoft.Json.JsonConvert.SerializeObject(<#=operation.ContentParameter.VariableName#><#=Model.JsonSerializerParameterCode#>)<#}#>);
@@ -277,16 +277,23 @@ urlBuilder_.Append("<#=parameter.Name#>=").Append(System.Uri.EscapeDataString(<#
                         content_.Add(new System.Net.Http.StringContent(<#=parameter.VariableName#>.ToString()), "<#=parameter.Name#>");
 <#      }#>
 <#    }#>
-<#  }else if(!operation.IsGetOrDelete){#>
+<#  }else if(!operation.IsGetOrDeleteOrHead){#>
                 var content_ = new System.Net.Http.StringContent(string.Empty);
 <#  }#>
 <#}#>
-<#  if(!operation.IsGetOrDelete){#>
+<#  if(!operation.IsGetOrDeleteOrHead){#>
                 request_.Content = content_;
 <#  }#>
                 request_.Method = new System.Net.Http.HttpMethod("<#=operation.HttpMethod.ToString().ToUpperInvariant()#>");
-                request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+<#if(operation.HasResultType && !operation.HasAcceptHeaderParameterParameter){#>
                 request_.Headers.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("<#=operation.Produces#>"));
+<#  }#>
+
+                PrepareRequest(client_, request_, urlBuilder_);
+                var url_ = urlBuilder_.ToString();
+                request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+                PrepareRequest(client_, request_, url_);
+
                 var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
                 try
                 {
@@ -453,7 +460,7 @@ urlBuilder_.Append("<#=parameter.Name#>=").Append(System.Uri.EscapeDataString(<#
         }
         finally
         {
-<#if(!Model.InjectHttpClient){#>
+<#if(!Model.InjectHttpClient && Model.DisposeHttpClient){#>
             if (client_ != null)
                 client_.Dispose();
 <#}#>

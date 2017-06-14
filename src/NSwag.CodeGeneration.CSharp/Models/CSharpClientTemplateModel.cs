@@ -73,6 +73,9 @@ namespace NSwag.CodeGeneration.CSharp.Models
         /// <summary>Gets or sets a value indicating whether an HttpClient instance is injected.</summary>
         public bool InjectHttpClient => _settings.InjectHttpClient;
 
+        /// <summary>Gets or sets a value indicating whether to dispose the HttpClient (injected HttpClient is never disposed, default: true).</summary>
+        public bool DisposeHttpClient => _settings.DisposeHttpClient; 
+
         /// <summary>Gets a value indicating whether to use a HTTP client creation method.</summary>
         public bool UseHttpClientCreationMethod => _settings.UseHttpClientCreationMethod;
 
@@ -128,6 +131,6 @@ namespace NSwag.CodeGeneration.CSharp.Models
         }
         
         private bool RequiresJsonExceptionConverter =>
-            _document.Operations.Any(o => o.Operation.AllResponses.Any(r => r.Value.ActualResponseSchema.InheritsSchema(_exceptionSchema)));
+            _document.Operations.Any(o => o.Operation.AllResponses.Any(r => r.Value.ActualResponseSchema?.InheritsSchema(_exceptionSchema) == true));
     }
 }

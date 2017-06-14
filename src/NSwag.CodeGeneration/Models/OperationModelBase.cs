@@ -81,13 +81,16 @@ namespace NSwag.CodeGeneration.Models
         /// <summary>Gets the HTTP method in lowercase.</summary>
         public string HttpMethodLower => ConversionUtilities.ConvertToLowerCamelCase(HttpMethod.ToString(), false);
 
-        /// <summary>Gets a value indicating whether the HTTP method is GET or DELETE.</summary>
-        public bool IsGetOrDelete => HttpMethod == SwaggerOperationMethod.Get || HttpMethod == SwaggerOperationMethod.Delete;
+        /// <summary>Gets a value indicating whether the HTTP method is GET or DELETE or HEAD.</summary>
+        public bool IsGetOrDeleteOrHead =>
+            HttpMethod == SwaggerOperationMethod.Get ||
+            HttpMethod == SwaggerOperationMethod.Delete ||
+            HttpMethod == SwaggerOperationMethod.Head;
 
         /// <summary>Gets a value indicating whether the HTTP method is GET or HEAD.</summary>
         public bool IsGetOrHead => HttpMethod == SwaggerOperationMethod.Get || HttpMethod == SwaggerOperationMethod.Head;
 
-        // TODO: Remove this (not may not work correctly)
+        // TODO: Remove this (may not work correctly)
         /// <summary>Gets or sets a value indicating whether the operation has a result type (i.e. not void).</summary>
         public bool HasResultType
         {
@@ -151,8 +154,8 @@ namespace NSwag.CodeGeneration.Models
         /// <summary>Gets the success response.</summary>
         public TResponseModel SuccessResponse => Responses.FirstOrDefault(r => r.IsSuccess(this));
 
-        /// <summary>Gets the success response.</summary>
-        ResponseModelBase IOperationModel.SuccessResponse => SuccessResponse;
+        /// <summary>Gets the responses.</summary>
+        IEnumerable<ResponseModelBase> IOperationModel.Responses => Responses;
 
         /// <summary>Gets or sets the parameters.</summary>
         public IList<TParameterModel> Parameters { get; protected set; }
@@ -177,6 +180,9 @@ namespace NSwag.CodeGeneration.Models
 
         /// <summary>Gets the header parameters.</summary>
         public IEnumerable<TParameterModel> HeaderParameters => Parameters.Where(p => p.Kind == SwaggerParameterKind.Header);
+
+        /// <summary>Gets or sets a value indicating whether the accept header is defined in a parameter.</summary>
+        public bool HasAcceptHeaderParameterParameter => HeaderParameters.Any(p => p.Name.ToLowerInvariant() == "accept");
 
         /// <summary>Gets or sets a value indicating whether the operation has form parameters.</summary>
         public bool HasFormParameters => _operation.ActualParameters.Any(p => p.Kind == SwaggerParameterKind.FormData);

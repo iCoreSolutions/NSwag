@@ -9,7 +9,6 @@
 using System.Linq;
 using NJsonSchema;
 using NJsonSchema.CodeGeneration;
-using NJsonSchema.CodeGeneration.TypeScript;
 using NSwag.CodeGeneration.Models;
 
 namespace NSwag.CodeGeneration.TypeScript.Models
@@ -44,8 +43,7 @@ namespace NSwag.CodeGeneration.TypeScript.Models
             Parameters = parameters.Select(parameter =>
                 new TypeScriptParameterModel(parameter.Name,
                     GetParameterVariableName(parameter, _operation.Parameters), ResolveParameterType(parameter),
-                    parameter, parameters, _settings,
-                    _generator, (TypeScriptTypeResolver)resolver))
+                    parameter, parameters, _settings, _generator))
                 .ToList();
         }
 
@@ -57,7 +55,11 @@ namespace NSwag.CodeGeneration.TypeScript.Models
         public string ActualOperationNameUpper => ConversionUtilities.ConvertToUpperCamelCase(OperationName, false);
 
         /// <summary>Gets or sets the type of the result.</summary>
-        public override string ResultType => SupportsStrictNullChecks && UnwrappedResultType == "void" ? "null" : UnwrappedResultType;
+        public override string ResultType => SupportsStrictNullChecks && UnwrappedResultType != "void" && UnwrappedResultType != "null" ?
+            UnwrappedResultType + " | null" : UnwrappedResultType;
+
+        /// <summary>Gets a value indicating whether the operation requires mappings for DTO generation.</summary>
+        public bool RequiresMappings => Responses.Any(r => r.HasType && r.ActualResponseSchema.UsesComplexObjectSchema());
 
         /// <summary>Gets a value indicating whether the target TypeScript version supports strict null checks.</summary>
         public bool SupportsStrictNullChecks => _settings.TypeScriptGeneratorSettings.TypeScriptVersion >= 2.0m;

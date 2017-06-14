@@ -232,19 +232,6 @@ if(!parameter.IsLast){
             
             #line default
             #line hidden
-            
-            #line 16 "C:\Data\Projects\NSwag\src\NSwag.CodeGeneration.TypeScript\Templates\FetchClientTemplate.tt"
-if(Model.SupportsStrictNullChecks){
-            
-            #line default
-            #line hidden
-            this.Write(" | null");
-            
-            #line 16 "C:\Data\Projects\NSwag\src\NSwag.CodeGeneration.TypeScript\Templates\FetchClientTemplate.tt"
-}
-            
-            #line default
-            #line hidden
             this.Write(">;\r\n");
             
             #line 17 "C:\Data\Projects\NSwag\src\NSwag.CodeGeneration.TypeScript\Templates\FetchClientTemplate.tt"
@@ -578,19 +565,6 @@ if(!parameter.IsLast){
             
             #line default
             #line hidden
-            
-            #line 51 "C:\Data\Projects\NSwag\src\NSwag.CodeGeneration.TypeScript\Templates\FetchClientTemplate.tt"
-if(Model.SupportsStrictNullChecks){
-            
-            #line default
-            #line hidden
-            this.Write(" | null");
-            
-            #line 51 "C:\Data\Projects\NSwag\src\NSwag.CodeGeneration.TypeScript\Templates\FetchClientTemplate.tt"
-}
-            
-            #line default
-            #line hidden
             this.Write("> {\r\n        ");
             
             #line 52 "C:\Data\Projects\NSwag\src\NSwag.CodeGeneration.TypeScript\Templates\FetchClientTemplate.tt"
@@ -601,7 +575,7 @@ if(Model.SupportsStrictNullChecks){
             this.Write("\r\n\r\n");
             
             #line 54 "C:\Data\Projects\NSwag\src\NSwag.CodeGeneration.TypeScript\Templates\FetchClientTemplate.tt"
-if(!operation.IsGetOrHead){
+if(operation.HasContent){
             
             #line default
             #line hidden
@@ -612,17 +586,17 @@ if(!operation.IsGetOrHead){
             
             #line default
             #line hidden
-            this.Write("\r\n");
+            this.Write("\r\n\r\n");
             
-            #line 56 "C:\Data\Projects\NSwag\src\NSwag.CodeGeneration.TypeScript\Templates\FetchClientTemplate.tt"
+            #line 57 "C:\Data\Projects\NSwag\src\NSwag.CodeGeneration.TypeScript\Templates\FetchClientTemplate.tt"
 }
             
             #line default
             #line hidden
-            this.Write("\r\n        let options_ = <RequestInit>{\r\n");
+            this.Write("        let options_ = <RequestInit>{\r\n");
             
             #line 59 "C:\Data\Projects\NSwag\src\NSwag.CodeGeneration.TypeScript\Templates\FetchClientTemplate.tt"
-if(!operation.IsGetOrHead){
+if(operation.HasContent){
             
             #line default
             #line hidden
@@ -681,7 +655,7 @@ if(!operation.HasFormParameters){
             
             #line default
             #line hidden
-            this.Write("; charset=UTF-8\", \r\n");
+            this.Write("\", \r\n");
             
             #line 69 "C:\Data\Projects\NSwag\src\NSwag.CodeGeneration.TypeScript\Templates\FetchClientTemplate.tt"
 }
@@ -690,7 +664,7 @@ if(!operation.HasFormParameters){
             #line hidden
             
             #line 70 "C:\Data\Projects\NSwag\src\NSwag.CodeGeneration.TypeScript\Templates\FetchClientTemplate.tt"
-if(!operation.IsFile){
+if(operation.HasResultType && !operation.HasAcceptHeaderParameterParameter){
             
             #line default
             #line hidden
@@ -701,7 +675,7 @@ if(!operation.IsFile){
             
             #line default
             #line hidden
-            this.Write("; charset=UTF-8\"\r\n");
+            this.Write("\"\r\n");
             
             #line 72 "C:\Data\Projects\NSwag\src\NSwag.CodeGeneration.TypeScript\Templates\FetchClientTemplate.tt"
 }
@@ -773,27 +747,14 @@ if(Model.UseTransformResultMethod){
             
             #line default
             #line hidden
-            this.Write("(_response: Response): Promise<");
+            this.Write("(response: Response): Promise<");
             
             #line 91 "C:\Data\Projects\NSwag\src\NSwag.CodeGeneration.TypeScript\Templates\FetchClientTemplate.tt"
             this.Write(this.ToStringHelper.ToStringWithCulture(operation.ResultType));
             
             #line default
             #line hidden
-            
-            #line 91 "C:\Data\Projects\NSwag\src\NSwag.CodeGeneration.TypeScript\Templates\FetchClientTemplate.tt"
-if(Model.SupportsStrictNullChecks){
-            
-            #line default
-            #line hidden
-            this.Write(" | null");
-            
-            #line 91 "C:\Data\Projects\NSwag\src\NSwag.CodeGeneration.TypeScript\Templates\FetchClientTemplate.tt"
-}
-            
-            #line default
-            #line hidden
-            this.Write("> {\r\n        const _status = _response.status;\r\n        ");
+            this.Write("> {\r\n        const status = response.status;\r\n        ");
             
             #line 93 "C:\Data\Projects\NSwag\src\NSwag.CodeGeneration.TypeScript\Templates\FetchClientTemplate.tt"
             this.Write(this.ToStringHelper.ToStringWithCulture(TypeScriptTemplatePartGenerator.RenderProcessResponseCode(operation, 2)));

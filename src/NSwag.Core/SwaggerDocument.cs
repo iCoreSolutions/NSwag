@@ -56,6 +56,10 @@ namespace NSwag
         [JsonIgnore]
         public string DocumentPath { get; private set; }
 
+        /// <summary>Gets or sets the Swagger generator information.</summary>
+        [JsonProperty(PropertyName = "x-generator", DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate)]
+        public string Generator { get; set; }
+
         /// <summary>Gets or sets the Swagger specification version being used.</summary>
         [JsonProperty(PropertyName = "swagger", DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate)]
         public string Swagger { get; set; }
@@ -144,10 +148,12 @@ namespace NSwag
         /// <returns>The JSON string.</returns>
         public string ToJson(JsonSchemaGeneratorSettings settings)
         {
-            var jsonResolver = new IgnorableSerializerContractResolver();
+            var jsonResolver = new ExtendedSerializerContractResolver();
             // Ignore properties which are not allowed in Swagger
             jsonResolver.Ignore(typeof(JsonSchema4), "Title");
             jsonResolver.Ignore(typeof(JsonSchema4), "title");
+            // Newtonsoft.Json and NJsonSchema call it "readonly", but Swagger calls it "readOnly"
+            jsonResolver.Rename(typeof(JsonProperty), "readonly", "readOnly");
 
             var serializerSettings = new JsonSerializerSettings
             {
